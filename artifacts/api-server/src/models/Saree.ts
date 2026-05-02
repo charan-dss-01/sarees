@@ -1,6 +1,6 @@
 import mongoose, { Document, Schema, Types } from "mongoose";
 
-export interface ISaree extends Document {
+export interface ISaree extends Omit<Document, "collection"> {
   title: string;
   price: number;
   fabric: string;

@@ -9,6 +9,8 @@ import ContactPage from "@/pages/contact";
 import AdminLoginPage from "@/pages/admin-login";
 import AdminDashboard from "@/pages/admin-dashboard";
 import AdminContentPage from "@/pages/admin-content";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { getCollections, getAllSarees, getHomepage, type ApiCollection, type UISaree } from "@/services/api";
 
 function StickyNav() {
   const [scrolled, setScrolled] = useState(false);
@@ -168,12 +170,42 @@ function HeroSection() {
   );
 }
 
+const STATIC_COLLECTIONS = [
+  { _id: "s1", name: "Bridal",   subtitle: "The Wedding Trousseau", image: "/images/bridal.png",   createdAt: "" },
+  { _id: "s2", name: "Festive",  subtitle: "Celebration Silks",     image: "/images/festive.png",  createdAt: "" },
+  { _id: "s3", name: "Handloom", subtitle: "Artisanal Heritage",    image: "/images/handloom.png", createdAt: "" },
+] satisfies (ApiCollection & { subtitle: string })[];
+
+const STATIC_ARRIVALS = [
+  { id: "a1", name: "Ivory & Gold Banarasi",  price: "₹24,500", img: "/images/arrival-1.png" },
+  { id: "a2", name: "Midnight Blue Chanderi", price: "₹18,000", img: "/images/arrival-2.png" },
+  { id: "a3", name: "Regal Maroon Paithani",  price: "₹32,000", img: "/images/arrival-3.png" },
+  { id: "a4", name: "Rose Pink Organza",       price: "₹16,500", img: "/images/arrival-4.png" },
+];
+
+function CollectionSkeleton() {
+  return (
+    <div className="animate-pulse flex flex-col">
+      <div className="aspect-[3/4] mb-6 bg-card" />
+      <div className="flex flex-col items-center gap-2">
+        <div className="h-2.5 bg-card rounded w-24" />
+        <div className="h-7 bg-card rounded w-32" />
+        <div className="h-2.5 bg-card rounded w-16" />
+      </div>
+    </div>
+  );
+}
+
 function FeaturedCollections() {
-  const collections = [
-    { title: "Bridal", subtitle: "The Wedding Trousseau", img: "/images/bridal.png" },
-    { title: "Festive", subtitle: "Celebration Silks", img: "/images/festive.png" },
-    { title: "Handloom", subtitle: "Artisanal Heritage", img: "/images/handloom.png" },
-  ];
+  const [collections, setCollections] = useState<(ApiCollection & { subtitle?: string })[]>(STATIC_COLLECTIONS);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    getCollections()
+      .then((data) => { if (data.length > 0) setCollections(data); })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
 
   return (
     <section id="collections" className="py-24 md:py-32 bg-background px-6 md:px-12">
@@ -193,37 +225,41 @@ function FeaturedCollections() {
         </motion.div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12">
-          {collections.map((item, i) => (
-            <motion.div
-              key={i}
-              className="group cursor-pointer flex flex-col"
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true, margin: "-50px" }}
-              variants={{
-                hidden: { opacity: 0, y: 40 },
-                visible: { opacity: 1, y: 0, transition: { duration: 0.8, delay: i * 0.2 } }
-              }}
-              data-testid={`collection-card-${item.title.toLowerCase()}`}
-            >
-              <Link href="/collections" className="flex flex-col">
-                <div className="overflow-hidden aspect-[3/4] mb-6 relative bg-card">
-                  <motion.img
-                    src={item.img}
-                    alt={item.title}
-                    className="w-full h-full object-cover"
-                    whileHover={{ scale: 1.04 }}
-                    transition={{ duration: 0.6, ease: "easeOut" }}
-                  />
-                </div>
-                <div className="flex flex-col items-center text-center">
-                  <span className="text-primary uppercase tracking-[0.2em] text-xs font-sans mb-3">{item.subtitle}</span>
-                  <h3 className="font-serif text-3xl text-foreground mb-4 font-light group-hover:text-primary transition-colors duration-300">{item.title}</h3>
-                  <span className="text-muted-foreground uppercase tracking-widest text-xs font-sans pb-1 border-b border-transparent group-hover:border-primary transition-colors duration-300">Explore</span>
-                </div>
-              </Link>
-            </motion.div>
-          ))}
+          {loading
+            ? Array.from({ length: 3 }).map((_, i) => <CollectionSkeleton key={i} />)
+            : collections.map((item, i) => (
+              <motion.div
+                key={item._id}
+                className="group cursor-pointer flex flex-col"
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true, margin: "-50px" }}
+                variants={{
+                  hidden: { opacity: 0, y: 40 },
+                  visible: { opacity: 1, y: 0, transition: { duration: 0.8, delay: i * 0.2 } }
+                }}
+                data-testid={`collection-card-${item.name.toLowerCase()}`}
+              >
+                <Link href="/collections" className="flex flex-col">
+                  <div className="overflow-hidden aspect-[3/4] mb-6 relative bg-card">
+                    <motion.img
+                      src={item.image}
+                      alt={item.name}
+                      className="w-full h-full object-cover"
+                      whileHover={{ scale: 1.04 }}
+                      transition={{ duration: 0.6, ease: "easeOut" }}
+                    />
+                  </div>
+                  <div className="flex flex-col items-center text-center">
+                    <span className="text-primary uppercase tracking-[0.2em] text-xs font-sans mb-3">
+                      {"subtitle" in item ? (item as { subtitle: string }).subtitle : "Fine Silks"}
+                    </span>
+                    <h3 className="font-serif text-3xl text-foreground mb-4 font-light group-hover:text-primary transition-colors duration-300">{item.name}</h3>
+                    <span className="text-muted-foreground uppercase tracking-widest text-xs font-sans pb-1 border-b border-transparent group-hover:border-primary transition-colors duration-300">Explore</span>
+                  </div>
+                </Link>
+              </motion.div>
+            ))}
         </div>
       </div>
     </section>
@@ -231,12 +267,17 @@ function FeaturedCollections() {
 }
 
 function NewArrivals() {
-  const products = [
-    { name: "Ivory & Gold Banarasi", price: "₹24,500", img: "/images/arrival-1.png" },
-    { name: "Midnight Blue Chanderi", price: "₹18,000", img: "/images/arrival-2.png" },
-    { name: "Regal Maroon Paithani", price: "₹32,000", img: "/images/arrival-3.png" },
-    { name: "Rose Pink Organza", price: "₹16,500", img: "/images/arrival-4.png" },
-  ];
+  const [products, setProducts] = useState<typeof STATIC_ARRIVALS>(STATIC_ARRIVALS);
+
+  useEffect(() => {
+    getAllSarees({ limit: 4 })
+      .then(({ sarees }) => {
+        if (sarees.length > 0) {
+          setProducts(sarees.map((s) => ({ id: s.id, name: s.name, price: s.price, img: s.img })));
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   return (
     <section className="py-24 bg-card px-6 md:px-12 overflow-hidden">
@@ -408,6 +449,7 @@ function HomePage() {
 
 function App() {
   return (
+    <AuthProvider>
     <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
       <Switch>
         <Route path="/" component={HomePage} />
@@ -428,6 +470,7 @@ function App() {
         </Route>
       </Switch>
     </WouterRouter>
+    </AuthProvider>
   );
 }
 

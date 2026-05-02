@@ -16,8 +16,18 @@ if (Number.isNaN(port) || port <= 0) {
 }
 
 async function bootstrap(): Promise<void> {
-  await connectDB();
-  initCloudinary();
+  // DB and Cloudinary are optional at startup — routes will 503 if not connected
+  try {
+    await connectDB();
+  } catch (err) {
+    logger.warn({ err }, "MongoDB connection failed — DB routes will be unavailable");
+  }
+
+  try {
+    initCloudinary();
+  } catch (err) {
+    logger.warn({ err }, "Cloudinary init failed — image uploads will be unavailable");
+  }
 
   app.listen(port, (err?: Error) => {
     if (err) {

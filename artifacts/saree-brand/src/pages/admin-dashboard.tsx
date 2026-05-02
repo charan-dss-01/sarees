@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Link } from "wouter";
-import { SAREES } from "@/data/sarees";
+import { Link, useLocation } from "wouter";
+import { getToken, clearToken, getAllSarees, getCollections, type UISaree, type ApiCollection } from "@/services/api";
 
 /* ─── palette ─────────────────────────────────────── */
 const C = {
@@ -26,10 +26,7 @@ const C = {
   redLight: "#FCECEA",
 };
 
-/* ─── mock data ───────────────────────────────────── */
-const CATEGORIES = ["Bridal", "Festive", "Handloom", "Contemporary"] as const;
-const RECENT = SAREES.slice(0, 6);
-
+/* ─── static fallback activity ───────────────────── */
 const ACTIVITY = [
   { time: "2 min ago",  text: "New enquiry for Crimson Zari Bridal",        dot: C.green },
   { time: "18 min ago", text: "Collection page visited 43 times today",     dot: C.blue },
@@ -333,15 +330,10 @@ function StatCard({
 }
 
 /* ─── mini bar chart ──────────────────────────────── */
-const BAR_DATA = [
-  { label: "Bridal",      count: SAREES.filter(s => s.category === "Bridal").length,      color: C.gold },
-  { label: "Festive",     count: SAREES.filter(s => s.category === "Festive").length,     color: C.blue },
-  { label: "Handloom",    count: SAREES.filter(s => s.category === "Handloom").length,    color: C.green },
-  { label: "Contemporary",count: SAREES.filter(s => s.category === "Contemporary").length,color: C.muted },
-];
-const BAR_MAX = Math.max(...BAR_DATA.map(b => b.count));
+interface BarEntry { label: string; count: number; color: string; }
 
-function CategoryBreakdown() {
+function CategoryBreakdown({ barData }: { barData: BarEntry[] }) {
+  const barMax = Math.max(...barData.map(b => b.count), 1);
   return (
     <div
       className="rounded-xl border p-5 flex flex-col gap-5"
@@ -355,7 +347,7 @@ function CategoryBreakdown() {
       </div>
 
       <div className="flex flex-col gap-3.5">
-        {BAR_DATA.map((b, i) => (
+        {barData.map((b, i) => (
           <div key={b.label} className="flex items-center gap-3">
             <span className="font-sans text-xs w-24 shrink-0" style={{ color: C.muted }}>{b.label}</span>
             <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: C.bg }}>
@@ -363,7 +355,7 @@ function CategoryBreakdown() {
                 className="h-full rounded-full"
                 style={{ background: b.color }}
                 initial={{ width: 0 }}
-                animate={{ width: `${(b.count / BAR_MAX) * 100}%` }}
+                animate={{ width: `${(b.count / barMax) * 100}%` }}
                 transition={{ duration: 0.6, delay: i * 0.08, ease: [0.22, 1, 0.36, 1] }}
               />
             </div>
@@ -383,7 +375,7 @@ const CATEGORY_COLORS: Record<string, { bg: string; text: string }> = {
   Contemporary:  { bg: "#F0EDE8",    text: C.muted },
 };
 
-function RecentUploads() {
+function RecentUploads({ sarees, loading }: { sarees: UISaree[]; loading: boolean }) {
   return (
     <div
       className="rounded-xl border flex flex-col"
@@ -416,7 +408,7 @@ function RecentUploads() {
             </tr>
           </thead>
           <tbody>
-            {RECENT.map((s, i) => {
+            {sarees.map((s, i) => {
               const badge = CATEGORY_COLORS[s.category] ?? { bg: "#eee", text: "#666" };
               return (
                 <motion.tr
@@ -441,7 +433,7 @@ function RecentUploads() {
                     </span>
                   </td>
                   <td className="px-5 py-3.5 font-sans text-sm" style={{ color: C.muted }}>{s.fabric}</td>
-                  <td className="px-5 py-3.5 font-sans text-sm font-medium" style={{ color: C.text }}>{s.price}</td>
+                  <td className="px-5 py-3.5 font-sans text-sm font-medium" style={{ color: C.text }}>{s.price ?? ""}</td>
                   <td className="px-5 py-3.5">
                     <span className="font-sans text-xs font-medium px-2.5 py-1 rounded-full" style={{ background: C.greenLight, color: C.green }}>
                       Live
@@ -456,7 +448,7 @@ function RecentUploads() {
 
       {/* mobile list */}
       <div className="md:hidden flex flex-col divide-y" style={{ borderColor: C.border }}>
-        {RECENT.map((s) => {
+        {sarees.map((s) => {
           const badge = CATEGORY_COLORS[s.category] ?? { bg: "#eee", text: "#666" };
           return (
             <div key={s.id} className="flex items-center gap-3.5 px-5 py-3.5">
@@ -521,10 +513,49 @@ function ActivityFeed() {
 
 /* ─── page ────────────────────────────────────────── */
 export default function AdminDashboard() {
+  const [, navigate] = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const totalSarees = SAREES.length;
-  const totalCategories = CATEGORIES.length;
-  const totalValue = SAREES.reduce((acc, s) => acc + s.priceNum, 0);
+  const [sarees, setSarees] = useState<UISaree[]>([]);
+  const [collections, setCollections] = useState<ApiCollection[]>([]);
+  const [dataLoading, setDataLoading] = useState(true);
+
+  /* auth guard */
+  useEffect(() => {
+    if (!getToken()) navigate("/admin");
+  }, [navigate]);
+
+  /* fetch data */
+  useEffect(() => {
+    Promise.all([
+      getAllSarees({ limit: 100 }).then(({ sarees: s }) => setSarees(s)),
+      getCollections().then(setCollections),
+    ])
+      .catch(() => {})
+      .finally(() => setDataLoading(false));
+  }, []);
+
+  const totalSarees = sarees.length;
+  const totalCategories = collections.length || 4;
+  const totalValue = sarees.reduce((acc, s) => acc + s.priceNum, 0);
+
+  const CAT_COLORS = [C.gold, C.blue, C.green, C.muted, C.red];
+  const barData: BarEntry[] = collections.length
+    ? collections.map((col, i) => ({
+        label: col.name,
+        count: sarees.filter((s) => s.category === col.name).length,
+        color: CAT_COLORS[i % CAT_COLORS.length],
+      }))
+    : [
+        { label: "Bridal",       count: sarees.filter((s) => s.category === "Bridal").length,       color: C.gold },
+        { label: "Festive",      count: sarees.filter((s) => s.category === "Festive").length,      color: C.blue },
+        { label: "Handloom",     count: sarees.filter((s) => s.category === "Handloom").length,     color: C.green },
+        { label: "Contemporary", count: sarees.filter((s) => s.category === "Contemporary").length, color: C.muted },
+      ];
+
+  function handleLogout() {
+    clearToken();
+    navigate("/admin");
+  }
 
   return (
     <div className="flex h-screen overflow-hidden font-sans" style={{ background: C.bg }}>
@@ -602,10 +633,10 @@ export default function AdminDashboard() {
               {/* middle row */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 <div className="lg:col-span-2">
-                  <RecentUploads />
+                  <RecentUploads sarees={sarees.slice(0, 6)} loading={dataLoading} />
                 </div>
                 <div className="flex flex-col gap-4">
-                  <CategoryBreakdown />
+                  <CategoryBreakdown barData={barData} />
                   <ActivityFeed />
                 </div>
               </div>

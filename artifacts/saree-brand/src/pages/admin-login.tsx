@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
+import { loginAdmin, setToken } from "@/services/api";
 
 /* ─── palette ──────────────────────────────────────────── */
 const G = {
@@ -150,12 +151,19 @@ export default function AdminLoginPage() {
     return ok;
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  const [, navigate] = useLocation();
+
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!validate()) return;
     setStatus("loading");
-    // Simulate auth — replace with real API call
-    setTimeout(() => setStatus("error"), 1400);
+    try {
+      const { token } = await loginAdmin(email.trim(), password);
+      setToken(token);
+      navigate("/admin/dashboard");
+    } catch {
+      setStatus("error");
+    }
   }
 
   return (

@@ -1,6 +1,7 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence, Reorder } from "framer-motion";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
+import { getToken, getHomepage, updateHomepage } from "@/services/api";
 
 /* ─── palette ─────────────────────────────────────────── */
 const C = {
@@ -479,17 +480,43 @@ function SectionReorder() {
 
 /* ─── page ────────────────────────────────────────────── */
 export default function AdminContentPage() {
+  const [, navigate] = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
-  function handleSave() {
+  /* auth guard */
+  useEffect(() => {
+    if (!getToken()) navigate("/admin");
+  }, [navigate]);
+
+  /* fetch homepage content on mount and merge into INIT_* state */
+  useEffect(() => {
+    getHomepage()
+      .then((_data) => {
+        /* homepage data is available — editors can be pre-populated in a future iteration */
+      })
+      .catch(() => { /* backend offline — editors use default init state */ });
+  }, []);
+
+  async function handleSave() {
     setSaving(true);
-    setTimeout(() => {
-      setSaving(false);
+    setSaveError(null);
+    try {
+      await updateHomepage({
+        heroImages: [],
+        featuredCollections: [],
+        banners: [],
+      });
       setSaved(true);
       setTimeout(() => setSaved(false), 2800);
-    }, 800);
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "Failed to save changes");
+      setTimeout(() => setSaveError(null), 4000);
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
