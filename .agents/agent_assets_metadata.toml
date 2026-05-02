@@ -1,0 +1,50 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "GRq9ib8m-FDHRKu2ZMtJV"
+uri = "file://artifacts/saree-brand/public/images/bridal.png"
+type = "image"
+title = "Bridal red Benarasi saree"
+
+[[generated]]
+id = "dvaTTeQmgZSUIVPP_gZQd"
+uri = "file://artifacts/saree-brand/public/images/festive.png"
+type = "image"
+title = "Festive green Kanjivaram saree"
+
+[[generated]]
+id = "9VsvJaXPavaBxD2s9OkiA"
+uri = "file://artifacts/saree-brand/public/images/handloom.png"
+type = "image"
+title = "Handloom cream gold silk"
+
+[[generated]]
+id = "O1NhG3YSYvqdPE8DFMIY9"
+uri = "file://artifacts/saree-brand/public/images/arrival-1.png"
+type = "image"
+title = "Ivory gold Banarasi flatlay"
+
+[[generated]]
+id = "PlM_5DTmbV70cvZS5hcjb"
+uri = "file://artifacts/saree-brand/public/images/arrival-2.png"
+type = "image"
+title = "Navy blue Chanderi saree"
+
+[[generated]]
+id = "HhC57UFh3ekqS8t5CEcfm"
+uri = "file://artifacts/saree-brand/public/images/arrival-3.png"
+type = "image"
+title = "Maroon gold Paithani saree"
+
+[[generated]]
+id = "SUXksRq3Cacb3pC-4apQp"
+uri = "file://artifacts/saree-brand/public/images/arrival-4.png"
+type = "image"
+title = "Pale rose pink organza"
+
+[[generated]]
+id = "CgcfniYYx1EolxkKu6Lbh"
+uri = "file://artifacts/saree-brand/public/images/story.png"
+type = "image"
+title = "Craftsman weaving silk handloom"
