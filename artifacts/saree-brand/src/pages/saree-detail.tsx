@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
+import { motion, AnimatePresence, useScroll, useTransform } from "framer-motion";
 import { Link, useParams } from "wouter";
 import { SiWhatsapp, SiInstagram, SiPinterest } from "react-icons/si";
 import { SAREES } from "@/data/sarees";
 
-const PALETTE = {
+/* ─── palette ─────────────────────────────────────────── */
+const G = {
   bg: "#FAF7F2",
   cream: "#F3EDE3",
   gold: "#B8973E",
@@ -12,266 +13,387 @@ const PALETTE = {
   charcoal: "#2C2A26",
   muted: "#7A7060",
   dark: "#1C1A16",
+  border: "rgba(184,151,62,0.18)",
 };
 
+/* ─── sticky nav ───────────────────────────────────────── */
 function PageNav() {
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 40);
-    window.addEventListener("scroll", onScroll);
-    return () => window.removeEventListener("scroll", onScroll);
+    const fn = () => setScrolled(window.scrollY > 60);
+    window.addEventListener("scroll", fn);
+    return () => window.removeEventListener("scroll", fn);
   }, []);
 
   return (
     <motion.nav
-      className="fixed top-0 left-0 right-0 z-50 transition-colors duration-500"
-      style={{ background: scrolled ? PALETTE.bg : `${PALETTE.bg}f5`, boxShadow: scrolled ? "0 1px 12px rgba(44,42,38,0.06)" : "none", paddingTop: scrolled ? "1rem" : "1.25rem", paddingBottom: scrolled ? "1rem" : "1.25rem" }}
-      initial={{ y: -80, opacity: 0 }}
+      className="fixed top-0 left-0 right-0 z-50"
+      style={{
+        background: G.bg,
+        borderBottom: scrolled ? `1px solid ${G.border}` : "1px solid transparent",
+        paddingBlock: scrolled ? "0.875rem" : "1.125rem",
+        transition: "padding 0.4s ease, border-color 0.4s ease",
+      }}
+      initial={{ y: -72, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
-      transition={{ duration: 0.7, ease: "easeOut" }}
+      transition={{ duration: 0.65, ease: "easeOut" }}
     >
-      <div className="container mx-auto px-6 md:px-12 flex items-center justify-between">
-        <div className="flex items-center gap-6">
-          <Link href="/collections" className="text-xs uppercase tracking-[0.2em] font-sans transition-colors duration-200" style={{ color: PALETTE.muted }} data-testid="nav-back">
-            ← Collections
-          </Link>
-        </div>
+      <div className="container mx-auto px-5 md:px-10 flex items-center justify-between">
+        <Link
+          href="/collections"
+          className="text-[11px] uppercase tracking-[0.22em] font-sans flex items-center gap-1.5 transition-colors hover:opacity-60"
+          style={{ color: G.muted }}
+          data-testid="nav-back"
+        >
+          <svg width="14" height="10" viewBox="0 0 14 10" fill="none"><path d="M5 1L1 5L5 9M1 5H13" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          Collections
+        </Link>
 
-        <Link href="/" className="font-serif text-2xl md:text-3xl tracking-[0.25em] transition-colors duration-300 hover:opacity-70" style={{ color: PALETTE.charcoal }} data-testid="nav-brand">
+        <Link
+          href="/"
+          className="font-serif text-2xl tracking-[0.28em] transition-opacity hover:opacity-60"
+          style={{ color: G.charcoal }}
+          data-testid="nav-brand"
+        >
           ANANYA
         </Link>
 
-        <div className="hidden md:flex gap-7 text-xs uppercase tracking-[0.2em] font-sans" style={{ color: PALETTE.muted }}>
-          <Link href="/collections" className="hover:text-[#B8973E] transition-colors" data-testid="nav-collections">Collections</Link>
-          <a href="/#story" className="hover:text-[#B8973E] transition-colors" data-testid="nav-story">Story</a>
+        <div className="hidden md:flex gap-7 text-[11px] uppercase tracking-[0.2em] font-sans" style={{ color: G.muted }}>
+          <Link href="/collections" className="transition-colors hover:opacity-60">Collections</Link>
+          <a href="/#story" className="transition-colors hover:opacity-60">Story</a>
         </div>
-
-        <div className="md:hidden text-xs uppercase tracking-widest font-sans" style={{ color: PALETTE.muted }}>
-          &nbsp;
-        </div>
+        <div className="md:hidden w-24" />
       </div>
     </motion.nav>
   );
 }
 
+/* ─── image gallery ────────────────────────────────────── */
+function Gallery({ images, name }: { images: string[]; name: string }) {
+  const [active, setActive] = useState(0);
+  const [direction, setDirection] = useState(0);
+  const dragX = useRef(0);
+
+  function go(next: number, dir: number) {
+    setDirection(dir);
+    setActive(next);
+  }
+  function prev() { go((active - 1 + images.length) % images.length, -1); }
+  function next() { go((active + 1) % images.length, 1); }
+
+  const variants = {
+    enter: (d: number) => ({ x: d > 0 ? "100%" : "-100%", opacity: 0 }),
+    center: { x: 0, opacity: 1 },
+    exit: (d: number) => ({ x: d > 0 ? "-100%" : "100%", opacity: 0 }),
+  };
+
+  return (
+    <div className="flex flex-col gap-4">
+      {/* Main image */}
+      <div
+        className="relative overflow-hidden"
+        style={{ aspectRatio: "3/4", background: G.cream, borderRadius: 0 }}
+      >
+        {/* Category badge */}
+        <div className="absolute top-4 left-4 z-20">
+          <span
+            className="px-3 py-1 text-[10px] uppercase tracking-[0.22em] font-sans"
+            style={{ background: "rgba(28,26,22,0.6)", color: G.paleGold, backdropFilter: "blur(8px)" }}
+          >
+            Ananya
+          </span>
+        </div>
+
+        <AnimatePresence initial={false} custom={direction} mode="popLayout">
+          <motion.img
+            key={active}
+            src={images[active]}
+            alt={`${name} — view ${active + 1}`}
+            className="absolute inset-0 w-full h-full object-cover"
+            custom={direction}
+            variants={variants}
+            initial="enter"
+            animate="center"
+            exit="exit"
+            transition={{ duration: 0.45, ease: [0.32, 0, 0.67, 0] }}
+            drag="x"
+            dragConstraints={{ left: 0, right: 0 }}
+            dragElastic={0.12}
+            onDragStart={() => { dragX.current = 0; }}
+            onDrag={(_e, info) => { dragX.current = info.offset.x; }}
+            onDragEnd={() => {
+              if (dragX.current < -48) next();
+              else if (dragX.current > 48) prev();
+            }}
+            style={{ userSelect: "none", WebkitUserDrag: "none" } as React.CSSProperties}
+            data-testid={`gallery-img-${active}`}
+          />
+        </AnimatePresence>
+
+        {/* Arrow buttons — desktop only */}
+        {images.length > 1 && (
+          <>
+            <button
+              onClick={prev}
+              className="hidden md:flex absolute left-3 top-1/2 -translate-y-1/2 z-20 w-9 h-9 items-center justify-center transition-opacity opacity-0 hover:opacity-100 group-hover:opacity-60"
+              style={{ background: "rgba(250,247,242,0.85)", backdropFilter: "blur(4px)" }}
+              data-testid="btn-gallery-prev"
+              aria-label="Previous image"
+            >
+              <svg width="14" height="10" viewBox="0 0 14 10" fill="none"><path d="M5 1L1 5L5 9M1 5H13" stroke={G.charcoal} strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            </button>
+            <button
+              onClick={next}
+              className="hidden md:flex absolute right-3 top-1/2 -translate-y-1/2 z-20 w-9 h-9 items-center justify-center transition-opacity opacity-0 hover:opacity-100"
+              style={{ background: "rgba(250,247,242,0.85)", backdropFilter: "blur(4px)" }}
+              data-testid="btn-gallery-next"
+              aria-label="Next image"
+            >
+              <svg width="14" height="10" viewBox="0 0 14 10" fill="none"><path d="M9 1L13 5L9 9M13 5H1" stroke={G.charcoal} strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            </button>
+          </>
+        )}
+
+        {/* Dot indicators — mobile */}
+        {images.length > 1 && (
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex gap-1.5 md:hidden">
+            {images.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => go(i, i > active ? 1 : -1)}
+                className="transition-all duration-300"
+                style={{
+                  width: i === active ? 20 : 6,
+                  height: 4,
+                  background: i === active ? G.paleGold : "rgba(250,247,242,0.55)",
+                  borderRadius: 2,
+                }}
+                data-testid={`dot-${i}`}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Thumbnails — desktop */}
+      {images.length > 1 && (
+        <div className="hidden md:flex gap-2.5">
+          {images.map((src, i) => (
+            <button
+              key={i}
+              onClick={() => go(i, i > active ? 1 : -1)}
+              className="flex-1 overflow-hidden transition-all duration-300"
+              style={{
+                aspectRatio: "3/4",
+                outline: i === active ? `2px solid ${G.gold}` : `2px solid transparent`,
+                outlineOffset: 0,
+                opacity: i === active ? 1 : 0.55,
+              }}
+              data-testid={`thumb-${i}`}
+            >
+              <img src={src} alt={`${name} thumbnail ${i + 1}`} className="w-full h-full object-cover" />
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── related card ─────────────────────────────────────── */
 function RelatedCard({ saree }: { saree: typeof SAREES[number] }) {
   return (
     <Link href={`/saree/${saree.id}`} data-testid={`related-card-${saree.id}`}>
-      <motion.div
-        className="group cursor-pointer"
-        whileHover={{ y: -4 }}
-        transition={{ duration: 0.35, ease: "easeOut" }}
-      >
-        <div className="overflow-hidden aspect-[3/4] mb-3 relative">
+      <motion.div className="group cursor-pointer" whileHover={{ y: -3 }} transition={{ duration: 0.3 }}>
+        <div className="overflow-hidden mb-3" style={{ aspectRatio: "3/4", background: G.cream }}>
           <motion.img
             src={saree.img}
             alt={saree.name}
             className="w-full h-full object-cover"
-            whileHover={{ scale: 1.06 }}
-            transition={{ duration: 0.65, ease: [0.25, 0.46, 0.45, 0.94] }}
+            whileHover={{ scale: 1.05 }}
+            transition={{ duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#1C1A16]/55 via-transparent to-transparent" />
-          <div className="absolute bottom-0 left-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-400">
-            <span className="text-[#D4AF72] text-[10px] uppercase tracking-widest font-sans">View →</span>
-          </div>
         </div>
-        <p className="font-serif text-base font-light leading-snug" style={{ color: PALETTE.charcoal }}>{saree.name}</p>
-        <p className="font-sans text-sm mt-1" style={{ color: PALETTE.muted }}>{saree.price}</p>
+        <p className="font-serif text-sm font-light leading-snug mb-0.5" style={{ color: G.charcoal }}>{saree.name}</p>
+        <p className="font-sans text-xs" style={{ color: G.muted }}>{saree.price}</p>
       </motion.div>
     </Link>
   );
 }
 
+/* ─── main page ────────────────────────────────────────── */
 export default function SareeDetailPage() {
   const params = useParams<{ id: string }>();
   const id = Number(params.id);
   const saree = SAREES.find((s) => s.id === id);
 
-  useEffect(() => {
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }, [id]);
+  useEffect(() => { window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior }); }, [id]);
 
   if (!saree) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center" style={{ background: PALETTE.bg }}>
-        <p className="font-serif text-2xl mb-4" style={{ color: PALETTE.muted }}>Saree not found</p>
-        <Link href="/collections" className="text-xs uppercase tracking-widest font-sans" style={{ color: PALETTE.gold }}>← Back to Collections</Link>
+      <div className="min-h-screen flex flex-col items-center justify-center gap-5" style={{ background: G.bg }}>
+        <p className="font-serif text-2xl" style={{ color: G.muted }}>Saree not found</p>
+        <Link href="/collections" className="text-xs uppercase tracking-widest font-sans" style={{ color: G.gold }}>← Back to Collections</Link>
       </div>
     );
   }
 
   const related = SAREES.filter((s) => s.category === saree.category && s.id !== saree.id).slice(0, 4);
-  const whatsappMsg = encodeURIComponent(`Hi, I'm interested in the "${saree.name}" (${saree.fabric}, ${saree.price}). Could you please share more details?`);
+  const whatsappMsg = encodeURIComponent(`Hi, I'm interested in "${saree.name}" (${saree.fabric}, ${saree.price}). Could you share more details?`);
 
   const fadeUp = {
-    hidden: { opacity: 0, y: 28 },
-    visible: (i: number) => ({ opacity: 1, y: 0, transition: { duration: 0.65, delay: i * 0.1, ease: "easeOut" } }),
+    hidden: { opacity: 0, y: 22 },
+    show: (i: number) => ({
+      opacity: 1, y: 0,
+      transition: { duration: 0.55, delay: i * 0.08, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] },
+    }),
   };
 
   return (
-    <div className="min-h-screen font-sans" style={{ background: PALETTE.bg, color: PALETTE.charcoal }}>
+    <div className="min-h-screen font-sans" style={{ background: G.bg, color: G.charcoal }}>
       <PageNav />
 
-      {/* Main content */}
-      <div className="pt-24 pb-0">
-        {/* Hero grid: image + info */}
-        <div className="container mx-auto max-w-7xl px-6 md:px-12">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 lg:gap-16 xl:gap-24 items-start">
+      {/* ── hero grid ── */}
+      <div className="pt-20 md:pt-24">
+        <div className="container mx-auto max-w-6xl px-5 md:px-10">
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-8 lg:gap-16 xl:gap-20 items-start">
 
-            {/* Image column */}
+            {/* Gallery column */}
             <motion.div
-              className="relative"
-              initial={{ opacity: 0, x: -30 }}
+              className="lg:sticky lg:top-24"
+              initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.85, ease: "easeOut" }}
+              transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
             >
-              <div className="overflow-hidden aspect-[3/4] lg:aspect-[4/5] sticky top-24">
-                <motion.img
-                  src={saree.img}
-                  alt={saree.name}
-                  className="w-full h-full object-cover"
-                  whileHover={{ scale: 1.03 }}
-                  transition={{ duration: 0.8, ease: "easeOut" }}
-                />
-                {/* Category badge */}
-                <div className="absolute top-5 left-5">
-                  <span
-                    className="px-3 py-1 text-[10px] uppercase tracking-[0.25em] font-sans"
-                    style={{ background: "rgba(28,26,22,0.65)", color: PALETTE.paleGold, backdropFilter: "blur(6px)" }}
-                  >
-                    {saree.category}
-                  </span>
-                </div>
-              </div>
+              <Gallery images={saree.images} name={saree.name} />
             </motion.div>
 
             {/* Details column */}
-            <div className="py-6 lg:py-12 flex flex-col gap-8">
+            <div className="flex flex-col gap-7 py-0 lg:py-8">
 
               {/* Breadcrumb */}
-              <motion.div
-                className="flex items-center gap-2 text-[11px] uppercase tracking-[0.2em] font-sans"
-                style={{ color: PALETTE.muted }}
-                custom={0} variants={fadeUp} initial="hidden" animate="visible"
+              <motion.nav
+                className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.22em] font-sans flex-wrap"
+                style={{ color: G.muted }}
+                custom={0} variants={fadeUp} initial="hidden" animate="show"
               >
-                <Link href="/" className="hover:text-[#B8973E] transition-colors">Home</Link>
-                <span>/</span>
-                <Link href="/collections" className="hover:text-[#B8973E] transition-colors">Collections</Link>
-                <span>/</span>
-                <span style={{ color: PALETTE.gold }}>{saree.category}</span>
-              </motion.div>
+                <Link href="/" className="hover:opacity-60 transition-opacity">Home</Link>
+                <span style={{ color: G.paleGold }}>/</span>
+                <Link href="/collections" className="hover:opacity-60 transition-opacity">Collections</Link>
+                <span style={{ color: G.paleGold }}>/</span>
+                <span style={{ color: G.gold }}>{saree.category}</span>
+              </motion.nav>
 
-              {/* Title & Price */}
-              <motion.div custom={1} variants={fadeUp} initial="hidden" animate="visible">
-                <p className="text-xs uppercase tracking-[0.3em] font-sans mb-3" style={{ color: PALETTE.gold }}>
+              {/* Name + price */}
+              <motion.div custom={1} variants={fadeUp} initial="hidden" animate="show">
+                <p className="text-[11px] uppercase tracking-[0.3em] font-sans mb-2.5" style={{ color: G.gold }}>
                   {saree.fabric} · {saree.origin}
                 </p>
-                <h1 className="font-serif text-3xl md:text-4xl xl:text-5xl font-light leading-tight mb-5" style={{ color: PALETTE.charcoal }}>
+                <h1
+                  className="font-serif font-light leading-tight mb-5"
+                  style={{ fontSize: "clamp(1.75rem, 4vw, 2.75rem)", color: G.charcoal }}
+                >
                   {saree.name}
                 </h1>
-                <div className="flex items-baseline gap-4">
-                  <span className="font-serif text-2xl md:text-3xl font-light" style={{ color: PALETTE.charcoal }}>
+                <div className="flex items-baseline gap-3">
+                  <span className="font-serif text-2xl md:text-3xl font-light" style={{ color: G.charcoal }}>
                     {saree.price}
                   </span>
-                  <span className="text-xs font-sans uppercase tracking-widest" style={{ color: PALETTE.muted }}>
+                  <span className="text-[10px] font-sans uppercase tracking-widest" style={{ color: G.muted }}>
                     Incl. all taxes
                   </span>
                 </div>
               </motion.div>
 
               {/* Divider */}
-              <motion.div className="h-[1px]" style={{ background: `${PALETTE.paleGold}33` }} custom={2} variants={fadeUp} initial="hidden" animate="visible" />
+              <motion.div className="h-px" style={{ background: G.border }} custom={2} variants={fadeUp} initial="hidden" animate="show" />
 
               {/* Description */}
               <motion.p
-                className="font-sans text-base leading-relaxed md:text-lg"
-                style={{ color: PALETTE.muted }}
-                custom={3} variants={fadeUp} initial="hidden" animate="visible"
+                className="font-sans leading-[1.8] text-sm md:text-base"
+                style={{ color: G.muted }}
+                custom={3} variants={fadeUp} initial="hidden" animate="show"
               >
                 {saree.description}
               </motion.p>
 
               {/* Occasion */}
-              <motion.div custom={4} variants={fadeUp} initial="hidden" animate="visible">
-                <p className="text-[11px] uppercase tracking-[0.25em] font-sans mb-2" style={{ color: PALETTE.gold }}>Occasion</p>
-                <p className="font-sans text-sm leading-relaxed" style={{ color: PALETTE.charcoal }}>{saree.occasion}</p>
+              <motion.div custom={4} variants={fadeUp} initial="hidden" animate="show">
+                <p className="text-[10px] uppercase tracking-[0.26em] font-sans mb-1.5" style={{ color: G.gold }}>Occasion</p>
+                <p className="font-sans text-sm leading-relaxed" style={{ color: G.charcoal }}>{saree.occasion}</p>
               </motion.div>
 
               {/* Tags */}
-              <motion.div
-                className="flex flex-wrap gap-2"
-                custom={5} variants={fadeUp} initial="hidden" animate="visible"
-              >
+              <motion.div className="flex flex-wrap gap-2" custom={5} variants={fadeUp} initial="hidden" animate="show">
                 {saree.tags.map((tag) => (
                   <span
                     key={tag}
-                    className="px-3 py-1 text-[11px] uppercase tracking-[0.15em] font-sans border"
-                    style={{ border: `1px solid ${PALETTE.paleGold}55`, color: PALETTE.muted }}
+                    className="px-3.5 py-1 text-[10px] uppercase tracking-[0.18em] font-sans"
+                    style={{ border: `1px solid ${G.border}`, color: G.muted }}
                   >
                     {tag}
                   </span>
                 ))}
               </motion.div>
 
-              {/* CTA buttons */}
-              <motion.div
-                className="flex flex-col sm:flex-row gap-3 pt-2"
-                custom={6} variants={fadeUp} initial="hidden" animate="visible"
-              >
+              {/* ─── PRIMARY CTA ─────────────────────────── */}
+              <motion.div custom={6} variants={fadeUp} initial="hidden" animate="show" className="pt-1">
                 <a
                   href={`https://wa.me/919876543210?text=${whatsappMsg}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex-1 inline-flex items-center justify-center gap-3 px-7 py-4 font-sans text-xs uppercase tracking-widest font-medium transition-all duration-300 hover:opacity-90 active:scale-[0.98] rounded-full"
-                  style={{ background: "#25D366", color: "#fff" }}
+                  className="group w-full flex items-center justify-center gap-3 py-4.5 font-sans text-sm uppercase tracking-[0.22em] font-medium transition-all duration-300 relative overflow-hidden"
+                  style={{
+                    background: "#128C7E",
+                    color: "#fff",
+                    paddingBlock: "1.1rem",
+                  }}
                   data-testid="btn-whatsapp-saree"
                 >
-                  <SiWhatsapp className="text-base" />
-                  Enquire on WhatsApp
+                  {/* shimmer */}
+                  <span
+                    className="absolute inset-0 translate-x-[-110%] group-hover:translate-x-[110%] transition-transform duration-700 ease-out"
+                    style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent)" }}
+                  />
+                  <SiWhatsapp className="text-lg relative z-10" />
+                  <span className="relative z-10">Enquire on WhatsApp</span>
                 </a>
+
                 <Link
                   href="/collections"
-                  className="flex-1 inline-flex items-center justify-center px-7 py-4 font-sans text-xs uppercase tracking-widest transition-all duration-300 border hover:bg-[#2C2A26] hover:text-white"
-                  style={{ borderColor: `${PALETTE.charcoal}40`, color: PALETTE.charcoal }}
-                  data-testid="btn-view-more"
+                  className="mt-3 w-full flex items-center justify-center py-4 font-sans text-xs uppercase tracking-[0.22em] transition-all duration-300 border hover:bg-[#2C2A26] hover:text-white"
+                  style={{ borderColor: `${G.charcoal}25`, color: G.charcoal, paddingBlock: "0.85rem" }}
+                  data-testid="btn-view-all"
                 >
-                  View More
+                  View All Collections
                 </Link>
               </motion.div>
 
               {/* Divider */}
-              <motion.div className="h-[1px]" style={{ background: `${PALETTE.paleGold}33` }} custom={7} variants={fadeUp} initial="hidden" animate="visible" />
+              <motion.div className="h-px" style={{ background: G.border }} custom={7} variants={fadeUp} initial="hidden" animate="show" />
 
-              {/* Details accordion */}
-              <motion.div
-                className="flex flex-col gap-5"
-                custom={8} variants={fadeUp} initial="hidden" animate="visible"
-              >
-                <div className="grid grid-cols-2 gap-5">
-                  <div>
-                    <p className="text-[11px] uppercase tracking-[0.25em] font-sans mb-1.5" style={{ color: PALETTE.gold }}>Origin</p>
-                    <p className="font-sans text-sm" style={{ color: PALETTE.charcoal }}>{saree.origin}</p>
-                  </div>
-                  <div>
-                    <p className="text-[11px] uppercase tracking-[0.25em] font-sans mb-1.5" style={{ color: PALETTE.gold }}>Weave Time</p>
-                    <p className="font-sans text-sm" style={{ color: PALETTE.charcoal }}>{saree.weaveTime}</p>
-                  </div>
-                  <div>
-                    <p className="text-[11px] uppercase tracking-[0.25em] font-sans mb-1.5" style={{ color: PALETTE.gold }}>Fabric</p>
-                    <p className="font-sans text-sm" style={{ color: PALETTE.charcoal }}>{saree.fabric}</p>
-                  </div>
-                  <div>
-                    <p className="text-[11px] uppercase tracking-[0.25em] font-sans mb-1.5" style={{ color: PALETTE.gold }}>Category</p>
-                    <p className="font-sans text-sm" style={{ color: PALETTE.charcoal }}>{saree.category}</p>
-                  </div>
+              {/* Details grid */}
+              <motion.div custom={8} variants={fadeUp} initial="hidden" animate="show">
+                <div className="grid grid-cols-2 gap-x-8 gap-y-5 mb-6">
+                  {[
+                    ["Origin", saree.origin],
+                    ["Weave Time", saree.weaveTime],
+                    ["Fabric", saree.fabric],
+                    ["Category", saree.category],
+                  ].map(([label, val]) => (
+                    <div key={label}>
+                      <p className="text-[10px] uppercase tracking-[0.26em] font-sans mb-1" style={{ color: G.gold }}>{label}</p>
+                      <p className="font-sans text-sm" style={{ color: G.charcoal }}>{val}</p>
+                    </div>
+                  ))}
                 </div>
 
                 <div>
-                  <p className="text-[11px] uppercase tracking-[0.25em] font-sans mb-2" style={{ color: PALETTE.gold }}>Care Instructions</p>
-                  <ul className="space-y-1">
+                  <p className="text-[10px] uppercase tracking-[0.26em] font-sans mb-2.5" style={{ color: G.gold }}>Care Instructions</p>
+                  <ul className="space-y-1.5">
                     {saree.care.map((c, i) => (
-                      <li key={i} className="flex items-start gap-2 font-sans text-sm" style={{ color: PALETTE.muted }}>
-                        <span style={{ color: PALETTE.gold, marginTop: 1 }}>—</span>
+                      <li key={i} className="flex items-start gap-2.5 font-sans text-sm leading-snug" style={{ color: G.muted }}>
+                        <span className="mt-[3px] shrink-0 w-3 h-px inline-block" style={{ background: G.paleGold }} />
                         {c}
                       </li>
                     ))}
@@ -281,98 +403,100 @@ export default function SareeDetailPage() {
             </div>
           </div>
         </div>
-
-        {/* Related sarees */}
-        {related.length > 0 && (
-          <section className="mt-24 md:mt-32 border-t" style={{ borderColor: `${PALETTE.paleGold}25` }}>
-            <div className="container mx-auto max-w-7xl px-6 md:px-12 py-16 md:py-24">
-              <motion.div
-                className="flex flex-col items-center mb-12 md:mb-16"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.7 }}
-              >
-                <span className="text-[11px] uppercase tracking-[0.3em] font-sans mb-3" style={{ color: PALETTE.gold }}>
-                  More from {saree.category}
-                </span>
-                <h2 className="font-serif text-3xl md:text-4xl font-light" style={{ color: PALETTE.charcoal }}>
-                  You may also like
-                </h2>
-              </motion.div>
-
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-5 md:gap-8">
-                {related.map((rel, i) => (
-                  <motion.div
-                    key={rel.id}
-                    initial={{ opacity: 0, y: 24 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.6, delay: i * 0.1 }}
-                  >
-                    <RelatedCard saree={rel} />
-                  </motion.div>
-                ))}
-              </div>
-            </div>
-          </section>
-        )}
-
-        {/* WhatsApp CTA strip */}
-        <section
-          className="py-16 px-6 flex flex-col items-center text-center"
-          style={{ background: PALETTE.dark }}
-        >
-          <motion.div
-            className="max-w-xl"
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.8 }}
-          >
-            <h3 className="font-serif text-2xl md:text-3xl font-light mb-3 text-white">
-              Questions about this piece?
-            </h3>
-            <p className="font-sans text-sm mb-7 leading-relaxed" style={{ color: `${PALETTE.paleGold}cc` }}>
-              Our styling experts are available on WhatsApp for personal consultations, sizing guidance, and custom inquiries.
-            </p>
-            <a
-              href={`https://wa.me/919876543210?text=${whatsappMsg}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2.5 px-8 py-3.5 font-sans text-xs uppercase tracking-widest font-medium transition-all duration-300 hover:scale-105 rounded-full"
-              style={{ background: "#25D366", color: "#fff" }}
-              data-testid="btn-whatsapp-strip"
-            >
-              <SiWhatsapp />
-              Chat on WhatsApp
-            </a>
-          </motion.div>
-        </section>
-
-        {/* Footer */}
-        <footer
-          className="py-12 px-6 flex flex-col items-center text-center border-t"
-          style={{ background: PALETTE.bg, borderColor: `${PALETTE.paleGold}22` }}
-        >
-          <div className="w-10 h-[1px] mb-8" style={{ background: PALETTE.gold }} />
-          <Link href="/" className="font-serif text-2xl tracking-[0.3em] mb-6 transition-colors hover:opacity-60" style={{ color: PALETTE.charcoal }} data-testid="footer-brand">
-            ANANYA
-          </Link>
-          <div className="flex flex-wrap justify-center gap-6 mb-6 font-sans uppercase tracking-widest text-[10px]" style={{ color: PALETTE.muted }}>
-            <Link href="/collections" className="hover:text-[#B8973E] transition-colors">Collections</Link>
-            <a href="/#story" className="hover:text-[#B8973E] transition-colors">Story</a>
-            <a href="/#contact" className="hover:text-[#B8973E] transition-colors">Contact</a>
-          </div>
-          <div className="flex gap-5 mb-6" style={{ color: PALETTE.muted }}>
-            <a href="#" className="hover:text-[#B8973E] transition-colors" data-testid="footer-ig"><SiInstagram /></a>
-            <a href="#" className="hover:text-[#B8973E] transition-colors" data-testid="footer-pin"><SiPinterest /></a>
-          </div>
-          <p className="font-sans text-[10px] tracking-widest" style={{ color: PALETTE.muted }}>
-            &copy; 2025 Ananya. All rights reserved.
-          </p>
-        </footer>
       </div>
+
+      {/* ── related ── */}
+      {related.length > 0 && (
+        <section className="mt-20 md:mt-28 border-t" style={{ borderColor: G.border }}>
+          <div className="container mx-auto max-w-6xl px-5 md:px-10 py-16 md:py-20">
+            <motion.div
+              className="flex flex-col items-start mb-10 md:mb-12"
+              initial={{ opacity: 0, y: 18 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6 }}
+            >
+              <span className="text-[10px] uppercase tracking-[0.3em] font-sans mb-2" style={{ color: G.gold }}>
+                More from {saree.category}
+              </span>
+              <h2 className="font-serif text-2xl md:text-3xl font-light" style={{ color: G.charcoal }}>
+                You may also like
+              </h2>
+            </motion.div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-7">
+              {related.map((rel, i) => (
+                <motion.div
+                  key={rel.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.5, delay: i * 0.09 }}
+                >
+                  <RelatedCard saree={rel} />
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ── full-width WhatsApp CTA ── */}
+      <section style={{ background: G.dark }}>
+        <motion.div
+          className="container mx-auto max-w-xl px-5 py-16 md:py-20 flex flex-col items-center text-center"
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.7 }}
+        >
+          <span className="block text-[10px] uppercase tracking-[0.3em] font-sans mb-4" style={{ color: G.paleGold }}>
+            Personal Consultation
+          </span>
+          <h3 className="font-serif text-2xl md:text-3xl font-light mb-3 text-white leading-snug">
+            Questions about this piece?
+          </h3>
+          <p className="font-sans text-sm mb-9 leading-relaxed" style={{ color: "rgba(212,175,114,0.75)" }}>
+            Our styling experts are on WhatsApp for consultations, custom orders, and sizing guidance.
+          </p>
+          <a
+            href={`https://wa.me/919876543210?text=${whatsappMsg}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group inline-flex items-center gap-3 font-sans text-xs uppercase tracking-[0.22em] font-medium transition-all duration-300 hover:scale-[1.03] active:scale-[0.98] relative overflow-hidden"
+            style={{ background: "#128C7E", color: "#fff", padding: "1rem 2.25rem" }}
+            data-testid="btn-whatsapp-bottom"
+          >
+            <span className="absolute inset-0 translate-x-[-110%] group-hover:translate-x-[110%] transition-transform duration-700 ease-out"
+              style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent)" }} />
+            <SiWhatsapp className="text-base relative z-10" />
+            <span className="relative z-10">Chat on WhatsApp</span>
+          </a>
+        </motion.div>
+      </section>
+
+      {/* ── footer ── */}
+      <footer
+        className="py-12 px-5 flex flex-col items-center text-center border-t"
+        style={{ background: G.bg, borderColor: G.border }}
+      >
+        <div className="w-8 h-px mb-7" style={{ background: G.gold }} />
+        <Link href="/" className="font-serif text-xl tracking-[0.3em] mb-5 transition-opacity hover:opacity-60" style={{ color: G.charcoal }} data-testid="footer-brand">
+          ANANYA
+        </Link>
+        <div className="flex flex-wrap justify-center gap-7 mb-5 font-sans uppercase tracking-widest text-[10px]" style={{ color: G.muted }}>
+          <Link href="/collections" className="hover:opacity-60 transition-opacity">Collections</Link>
+          <a href="/#story" className="hover:opacity-60 transition-opacity">Story</a>
+          <a href="/#contact" className="hover:opacity-60 transition-opacity">Contact</a>
+        </div>
+        <div className="flex gap-5 mb-5" style={{ color: G.muted }}>
+          <a href="#" className="hover:opacity-60 transition-opacity" data-testid="footer-ig"><SiInstagram /></a>
+          <a href="#" className="hover:opacity-60 transition-opacity" data-testid="footer-pin"><SiPinterest /></a>
+        </div>
+        <p className="font-sans text-[10px] tracking-widest" style={{ color: G.muted }}>
+          &copy; 2025 Ananya. All rights reserved.
+        </p>
+      </footer>
     </div>
   );
 }
