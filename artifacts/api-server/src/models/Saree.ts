@@ -12,9 +12,23 @@ export interface ISaree extends Omit<Document, "collection"> {
 
 const SareeSchema = new Schema<ISaree>(
   {
-    title:  { type: String, required: [true, "Title is required"], trim: true },
-    price:  { type: Number, required: [true, "Price is required"], min: 0 },
-    fabric: { type: String, required: [true, "Fabric is required"], trim: true },
+    title: {
+      type: String,
+      required: [true, "Title is required"],
+      trim: true,
+      maxlength: [200, "Title must be at most 200 characters"],
+    },
+    price: {
+      type: Number,
+      required: [true, "Price is required"],
+      min: [1, "Price must be greater than 0"],
+    },
+    fabric: {
+      type: String,
+      required: [true, "Fabric is required"],
+      trim: true,
+      maxlength: [100, "Fabric name must be at most 100 characters"],
+    },
     images: {
       type: [String],
       required: true,
@@ -32,7 +46,9 @@ const SareeSchema = new Schema<ISaree>(
   { timestamps: true },
 );
 
-SareeSchema.index({ collection: 1 });
-SareeSchema.index({ fabric: 1 });
+/* ── indexes ─────────────────────────────────────────────── */
+SareeSchema.index({ collection: 1, createdAt: -1 });  /* list by collection, newest first */
+SareeSchema.index({ fabric: 1 });                      /* filter by fabric */
+SareeSchema.index({ title: "text" });                  /* full-text search on title */
 
 export const Saree = mongoose.model<ISaree>("Saree", SareeSchema);

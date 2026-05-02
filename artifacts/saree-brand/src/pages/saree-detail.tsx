@@ -4,6 +4,7 @@ import { Link, useParams } from "wouter";
 import { SiWhatsapp, SiInstagram, SiPinterest } from "react-icons/si";
 import { getSareeById, getAllSarees, type UISaree } from "@/services/api";
 import { SAREES } from "@/data/sarees";
+import { generateWhatsAppLink } from "@/utils/whatsapp";
 
 /* ─── fallback static lookup ─────────────────────────────── */
 function staticSaree(id: string): UISaree | null {
@@ -254,7 +255,7 @@ export default function SareeDetailPage() {
     );
   }
 
-  const whatsappMsg = encodeURIComponent(`Hi, I'm interested in "${saree.name}" (${saree.fabric}, ${saree.price}). Could you share more details?`);
+  const whatsappHref = generateWhatsAppLink({ name: saree.name });
 
   const fadeUp = {
     hidden: { opacity: 0, y: 22 },
@@ -332,7 +333,7 @@ export default function SareeDetailPage() {
               {/* CTA */}
               <motion.div custom={6} variants={fadeUp} initial="hidden" animate="show" className="pt-1">
                 <a
-                  href={`https://wa.me/919876543210?text=${whatsappMsg}`}
+                  href={whatsappHref}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="group w-full flex items-center justify-center gap-3 font-sans text-sm uppercase tracking-[0.22em] font-medium transition-all duration-300 relative overflow-hidden"
@@ -415,7 +416,7 @@ export default function SareeDetailPage() {
           <span className="block text-[10px] uppercase tracking-[0.3em] font-sans mb-4" style={{ color: G.paleGold }}>Personal Consultation</span>
           <h3 className="font-serif text-2xl md:text-3xl font-light mb-3 text-white leading-snug">Questions about this piece?</h3>
           <p className="font-sans text-sm mb-9 leading-relaxed" style={{ color: "rgba(212,175,114,0.75)" }}>Our styling experts are on WhatsApp for consultations, custom orders, and sizing guidance.</p>
-          <a href={`https://wa.me/919876543210?text=${whatsappMsg}`} target="_blank" rel="noopener noreferrer" className="group inline-flex items-center gap-3 font-sans text-xs uppercase tracking-[0.22em] font-medium transition-all duration-300 hover:scale-[1.03] active:scale-[0.98] relative overflow-hidden" style={{ background: "#128C7E", color: "#fff", padding: "1rem 2.25rem" }} data-testid="btn-whatsapp-bottom">
+          <a href={whatsappHref} target="_blank" rel="noopener noreferrer" className="group inline-flex items-center gap-3 font-sans text-xs uppercase tracking-[0.22em] font-medium transition-all duration-300 hover:scale-[1.03] active:scale-[0.98] relative overflow-hidden" style={{ background: "#128C7E", color: "#fff", padding: "1rem 2.25rem" }} data-testid="btn-whatsapp-bottom">
             <span className="absolute inset-0 translate-x-[-110%] group-hover:translate-x-[110%] transition-transform duration-700 ease-out" style={{ background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent)" }} />
             <SiWhatsapp className="text-base relative z-10" />
             <span className="relative z-10">Chat on WhatsApp</span>

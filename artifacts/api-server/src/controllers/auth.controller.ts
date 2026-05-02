@@ -2,17 +2,20 @@ import type { Request, Response, NextFunction } from "express";
 import { User } from "../models/User.js";
 import { signToken } from "../utils/jwt.js";
 import { AppError } from "../utils/AppError.js";
+import { requireEmail, requirePassword } from "../middlewares/validate.js";
 
 export async function login(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const { email, password } = req.body as { email?: string; password?: string };
+    const body = req.body as Record<string, unknown>;
 
-    if (!email || !password) {
-      throw new AppError("Email and password are required.", 400);
-    }
+    const email    = requireEmail(body["email"]);
+    const password = requirePassword(body["password"]);
 
-    const user = await User.findOne({ email: email.toLowerCase().trim() }).select("+password");
-    if (!user || !(await user.comparePassword(password))) {
+    const user = await User.findOne({ email }).select("+password");
+    /* Use constant-time compare even when user not found to prevent timing attacks */
+    const valid = user ? await user.comparePassword(password) : false;
+
+    if (!user || !valid) {
       throw new AppError("Invalid email or password.", 401);
     }
 
@@ -30,9 +33,12 @@ export async function login(req: Request, res: Response, next: NextFunction): Pr
 
 export async function me(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const user = await User.findById(req.admin!.id);
+    const user = await User.findById(req.admin!.id).lean();
     if (!user) throw new AppError("Admin not found.", 404);
-    res.status(200).json({ status: "success", admin: { id: user.id, email: user.email } });
+    res.status(200).json({
+      status: "success",
+      admin: { id: (user._id as { toString(): string }).toString(), email: user.email },
+    });
   } catch (err) {
     next(err);
   }

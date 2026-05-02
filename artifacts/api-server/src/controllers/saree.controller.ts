@@ -2,56 +2,71 @@ import type { Request, Response, NextFunction } from "express";
 import { Saree } from "../models/Saree.js";
 import { uploadToCloudinary } from "../services/cloudinary.service.js";
 import { AppError } from "../utils/AppError.js";
+import {
+  requireString,
+  requirePositiveNumber,
+  validateMongoId,
+  parsePagination,
+} from "../middlewares/validate.js";
+import { sendWhatsAppNotification } from "../utils/whatsapp.js";
 
+/* ── GET /sarees ─────────────────────────────────────────── */
 export async function getAllSarees(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const { collection, fabric, page = "1", limit = "20" } = req.query as Record<string, string>;
+    const q = req.query as Record<string, string>;
+    const { page, limit, skip } = parsePagination(q, { limit: 20 });
 
     const filter: Record<string, unknown> = {};
-    if (collection) filter["collection"] = collection;
-    if (fabric)     filter["fabric"]     = { $regex: fabric, $options: "i" };
-
-    const pageNum  = Math.max(1, parseInt(page, 10));
-    const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10)));
-    const skip     = (pageNum - 1) * limitNum;
+    if (q["collection"]) {
+      validateMongoId(q["collection"], "collection");
+      filter["collection"] = q["collection"];
+    }
+    if (q["fabric"]) filter["fabric"] = { $regex: q["fabric"].trim(), $options: "i" };
 
     const [sarees, total] = await Promise.all([
       Saree.find(filter)
-        .populate("collection", "name")
+        .populate("collection", "name image")
         .sort({ createdAt: -1 })
         .skip(skip)
-        .limit(limitNum),
+        .limit(limit)
+        .lean(),
       Saree.countDocuments(filter),
     ]);
 
     res.status(200).json({
       status: "success",
-      count: sarees.length,
+      count:  sarees.length,
       total,
-      page: pageNum,
-      pages: Math.ceil(total / limitNum),
-      data: sarees,
+      page,
+      pages:  Math.ceil(total / limit),
+      data:   sarees,
     });
   } catch (err) { next(err); }
 }
 
+/* ── GET /sarees/:id ─────────────────────────────────────── */
 export async function getSareeById(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const saree = await Saree.findById(req.params["id"]).populate("collection", "name image");
+    validateMongoId(req.params["id"] ?? "", "saree id");
+    const saree = await Saree.findById(req.params["id"])
+      .populate("collection", "name image")
+      .lean();
     if (!saree) throw new AppError("Saree not found.", 404);
     res.status(200).json({ status: "success", data: saree });
   } catch (err) { next(err); }
 }
 
+/* ── POST /sarees ────────────────────────────────────────── */
 export async function createSaree(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const { title, price, fabric, collection } = req.body as {
-      title?: string; price?: string; fabric?: string; collection?: string;
-    };
+    const body = req.body as Record<string, unknown>;
 
-    if (!title || !price || !fabric || !collection) {
-      throw new AppError("title, price, fabric, and collection are required.", 400);
-    }
+    const title      = requireString(body["title"],      "Title",      { max: 200 });
+    const fabric     = requireString(body["fabric"],     "Fabric",     { max: 100 });
+    const collection = requireString(body["collection"], "Collection");
+    const price      = requirePositiveNumber(body["price"], "Price");
+
+    validateMongoId(collection, "collection");
 
     const files = req.files as Express.Multer.File[] | undefined;
     if (!files?.length) throw new AppError("At least one image is required.", 400);
@@ -62,30 +77,41 @@ export async function createSaree(req: Request, res: Response, next: NextFunctio
 
     const saree = await Saree.create({
       title,
-      price: parseFloat(price),
+      price,
       fabric,
       collection,
       images: uploads.map((u) => u.url),
     });
 
     const populated = await saree.populate("collection", "name");
+
+    /* non-blocking notification — failure must not break the response */
+    try { sendWhatsAppNotification({ title, price }); } catch { /* intentional */ }
+
     res.status(201).json({ status: "success", data: populated });
   } catch (err) { next(err); }
 }
 
+/* ── PUT /sarees/:id ─────────────────────────────────────── */
 export async function updateSaree(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
+    validateMongoId(req.params["id"] ?? "", "saree id");
     const saree = await Saree.findById(req.params["id"]);
     if (!saree) throw new AppError("Saree not found.", 404);
 
-    const { title, price, fabric, collection } = req.body as {
-      title?: string; price?: string; fabric?: string; collection?: string;
-    };
+    const body = req.body as Record<string, unknown>;
 
-    if (title)      saree.title      = title;
-    if (price)      saree.price      = parseFloat(price);
-    if (fabric)     saree.fabric     = fabric;
-    if (collection) saree.collection = collection as unknown as typeof saree.collection;
+    if (body["title"] !== undefined)
+      saree.title = requireString(body["title"], "Title", { max: 200 });
+    if (body["fabric"] !== undefined)
+      saree.fabric = requireString(body["fabric"], "Fabric", { max: 100 });
+    if (body["collection"] !== undefined) {
+      const col = requireString(body["collection"], "Collection");
+      validateMongoId(col, "collection");
+      saree.collection = col as unknown as typeof saree.collection;
+    }
+    if (body["price"] !== undefined)
+      saree.price = requirePositiveNumber(body["price"], "Price");
 
     const files = req.files as Express.Multer.File[] | undefined;
     if (files?.length) {
@@ -101,8 +127,10 @@ export async function updateSaree(req: Request, res: Response, next: NextFunctio
   } catch (err) { next(err); }
 }
 
+/* ── DELETE /sarees/:id ──────────────────────────────────── */
 export async function deleteSaree(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
+    validateMongoId(req.params["id"] ?? "", "saree id");
     const saree = await Saree.findByIdAndDelete(req.params["id"]);
     if (!saree) throw new AppError("Saree not found.", 404);
     res.status(200).json({ status: "success", message: "Saree deleted." });
