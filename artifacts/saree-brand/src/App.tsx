@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { Switch, Route, Router as WouterRouter, Link } from "wouter";
 import { SiWhatsapp, SiInstagram, SiPinterest } from "react-icons/si";
 import CollectionsPage from "@/pages/collections";
+import SareeDetailPage from "@/pages/saree-detail";
 
 function StickyNav() {
   const [scrolled, setScrolled] = useState(false);
@@ -406,6 +407,7 @@ function App() {
       <Switch>
         <Route path="/" component={HomePage} />
         <Route path="/collections" component={CollectionsPage} />
+        <Route path="/saree/:id" component={SareeDetailPage} />
         <Route>
           <div className="min-h-screen flex items-center justify-center bg-[#FAF7F2]">
             <div className="text-center">
