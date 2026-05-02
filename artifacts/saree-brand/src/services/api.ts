@@ -251,6 +251,27 @@ export async function deleteSaree(id: string): Promise<void> {
   await req(`/sarees/${id}`, { method: "DELETE" });
 }
 
+// ─── ANALYTICS ────────────────────────────────────────────
+export interface MonthlyUpload { month: string; count: number; }
+
+export interface AnalyticsData {
+  totalSarees: number;
+  totalCollections: number;
+  totalCustomers: number;
+  enquiriesCount: number;
+  recentSarees: ApiSaree[];
+  monthlySareeUploads: MonthlyUpload[];
+}
+
+export async function getAnalytics(): Promise<AnalyticsData> {
+  const res = await req<Envelope<AnalyticsData>>("/analytics");
+  return res.data;
+}
+
+export async function postEnquiry(data: { sareeId?: string; sareeTitle?: string }): Promise<void> {
+  await req("/enquiry", { method: "POST", body: JSON.stringify(data) });
+}
+
 // ─── HOMEPAGE ─────────────────────────────────────────────
 export async function getHomepage(): Promise<ApiHomepage> {
   const res = await req<Envelope<ApiHomepage>>("/homepage");

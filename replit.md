@@ -48,7 +48,7 @@ Fonts: Cormorant Garamond (serif) + DM Sans (sans) via Google Fonts `@import` in
 - `src/contexts/AuthContext.tsx` — JWT auth context (localStorage token persistence)
 - `src/services/api.ts` — All API functions, `UISaree` type, `normalizeSaree()`, token helpers (`getToken`, `clearToken`)
 - `src/pages/admin-login.tsx` — Calls real `loginAdmin()` API, redirects on success
-- `src/pages/admin-dashboard.tsx` — Auth-guarded; fetches sarees + collections from API; live stats + category breakdown; `BroadcastPanel` for sending real-time announcements
+- `src/pages/admin-dashboard.tsx` — Auth-guarded; fetches sarees + collections + analytics from API; live stat cards (total sarees, collections, enquiries, catalogue value); `MonthlyUploadsChart` (recharts BarChart, last 12 months); `BroadcastPanel` for real-time announcements
 - `src/pages/admin-content.tsx` — Auth-guarded; fetches homepage content; saves via `updateHomepage()`
 - `src/pages/collections.tsx` — Fetches sarees from API with skeleton + static fallback
 - `src/pages/saree-detail.tsx` — Fetches single saree with skeleton + static fallback
@@ -66,6 +66,11 @@ Fonts: Cormorant Garamond (serif) + DM Sans (sans) via Google Fonts `@import` in
 - `src/routes/upload.ts` — Cloudinary image upload
 - `src/routes/broadcast.routes.ts` — `POST /api/broadcast` (JWT-protected)
 - `src/controllers/broadcast.controller.ts` — Emits `admin_message` event to all socket clients
+- `src/models/Enquiry.ts` — Mongoose model: sareeId (ObjectId?), sareeTitle, createdAt; indexed by createdAt + sareeId
+- `src/routes/analytics.routes.ts` — `GET /api/analytics` (public)
+- `src/routes/enquiry.routes.ts` — `POST /api/enquiry` (public) + `GET /api/enquiry` (JWT-protected)
+- `src/controllers/analytics.controller.ts` — Aggregates totalSarees, totalCollections, enquiriesCount, recentSarees, 12-month monthlySareeUploads via MongoDB aggregation pipeline
+- `src/controllers/enquiry.controller.ts` — Creates Enquiry doc + emits `new_enquiry` socket event to admin
 - `build.mjs` — esbuild bundler
 
 ## Required Secrets (not yet set)

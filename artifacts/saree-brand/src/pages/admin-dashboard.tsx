@@ -1,7 +1,13 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link, useLocation } from "wouter";
-import { getToken, clearToken, getAllSarees, getCollections, type UISaree, type ApiCollection } from "@/services/api";
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+} from "recharts";
+import {
+  getToken, clearToken, getAllSarees, getCollections, getAnalytics,
+  type UISaree, type ApiCollection, type AnalyticsData, type MonthlyUpload,
+} from "@/services/api";
 import { useToast } from "@/components/NotificationToast";
 
 /* ─── palette ─────────────────────────────────────── */
@@ -616,12 +622,83 @@ function BroadcastPanel() {
   );
 }
 
+/* ─── monthly uploads chart ───────────────────────── */
+interface CustomTooltipProps {
+  active?: boolean;
+  payload?: { value: number }[];
+  label?: string;
+}
+function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div style={{
+      background: C.sidebar, border: `1px solid rgba(255,255,255,0.08)`,
+      borderRadius: 8, padding: "8px 12px",
+    }}>
+      <p style={{ color: "rgba(255,255,255,0.5)", fontFamily: "sans-serif", fontSize: 11, marginBottom: 2 }}>{label}</p>
+      <p style={{ color: C.gold, fontFamily: "sans-serif", fontSize: 13, fontWeight: 600 }}>
+        {payload[0].value} {payload[0].value === 1 ? "saree" : "sarees"}
+      </p>
+    </div>
+  );
+}
+
+function MonthlyUploadsChart({ data, loading }: { data: { month: string; count: number }[]; loading: boolean }) {
+  return (
+    <div
+      className="rounded-xl border p-5 flex flex-col gap-5"
+      style={{ background: C.surface, borderColor: C.border }}
+    >
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="font-sans font-semibold text-sm" style={{ color: C.text }}>Monthly Uploads</p>
+          <p className="font-sans text-xs mt-0.5" style={{ color: C.subtle }}>Sarees added per month (last 12 months)</p>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="h-40 flex items-center justify-center">
+          <div className="w-6 h-6 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: `${C.gold} transparent ${C.gold} ${C.gold}` }} />
+        </div>
+      ) : data.length === 0 || data.every(d => d.count === 0) ? (
+        <div className="h-40 flex flex-col items-center justify-center gap-2">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={C.subtle} strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 3v18h18"/><path d="M7 16l4-4 4 4 4-8"/>
+          </svg>
+          <p className="font-sans text-xs" style={{ color: C.subtle }}>No upload data yet</p>
+        </div>
+      ) : (
+        <ResponsiveContainer width="100%" height={160}>
+          <BarChart data={data} margin={{ top: 4, right: 4, left: -28, bottom: 0 }} barSize={16}>
+            <CartesianGrid vertical={false} stroke={C.border} strokeDasharray="3 3" />
+            <XAxis
+              dataKey="month"
+              tick={{ fontFamily: "sans-serif", fontSize: 10, fill: C.subtle }}
+              axisLine={false}
+              tickLine={false}
+            />
+            <YAxis
+              allowDecimals={false}
+              tick={{ fontFamily: "sans-serif", fontSize: 10, fill: C.subtle }}
+              axisLine={false}
+              tickLine={false}
+            />
+            <Tooltip content={<CustomTooltip />} cursor={{ fill: `${C.gold}12` }} />
+            <Bar dataKey="count" fill={C.gold} radius={[4, 4, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      )}
+    </div>
+  );
+}
+
 /* ─── page ────────────────────────────────────────── */
 export default function AdminDashboard() {
   const [, navigate] = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sarees, setSarees] = useState<UISaree[]>([]);
   const [collections, setCollections] = useState<ApiCollection[]>([]);
+  const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [dataLoading, setDataLoading] = useState(true);
 
   /* auth guard */
@@ -634,14 +711,17 @@ export default function AdminDashboard() {
     Promise.all([
       getAllSarees({ limit: 100 }).then(({ sarees: s }) => setSarees(s)),
       getCollections().then(setCollections),
+      getAnalytics().then(setAnalytics).catch(() => {}),
     ])
       .catch(() => {})
       .finally(() => setDataLoading(false));
   }, []);
 
-  const totalSarees = sarees.length;
-  const totalCategories = collections.length || 4;
+  const totalSarees = analytics?.totalSarees ?? sarees.length;
+  const totalCategories = analytics?.totalCollections ?? (collections.length || 4);
   const totalValue = sarees.reduce((acc, s) => acc + s.priceNum, 0);
+  const enquiriesCount = analytics?.enquiriesCount ?? 0;
+  const monthlyData: MonthlyUpload[] = analytics?.monthlySareeUploads ?? [];
 
   const CAT_COLORS = [C.gold, C.blue, C.green, C.muted, C.red];
   const barData: BarEntry[] = collections.length
@@ -710,11 +790,11 @@ export default function AdminDashboard() {
                 />
                 <StatCard
                   label="Enquiries"
-                  value="4"
-                  sub="Awaiting response"
+                  value={enquiriesCount}
+                  sub="WhatsApp enquiries"
                   accent={C.green}
                   accentLight={C.greenLight}
-                  trend={{ dir: "up", text: "3 new" }}
+                  trend={enquiriesCount > 0 ? { dir: "up", text: `${enquiriesCount} total` } : undefined}
                   icon={
                     <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M2 4h16v11a1 1 0 01-1 1H3a1 1 0 01-1-1V4z"/><path d="M2 4l8 7 8-7"/>
@@ -734,6 +814,9 @@ export default function AdminDashboard() {
                   }
                 />
               </div>
+
+              {/* monthly chart — full width */}
+              <MonthlyUploadsChart data={monthlyData} loading={dataLoading} />
 
               {/* middle row */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">

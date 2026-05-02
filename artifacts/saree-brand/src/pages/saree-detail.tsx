@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link, useParams } from "wouter";
 import { SiWhatsapp, SiInstagram, SiPinterest } from "react-icons/si";
-import { getSareeById, getAllSarees, type UISaree } from "@/services/api";
+import { getSareeById, getAllSarees, postEnquiry, type UISaree } from "@/services/api";
 import { SAREES } from "@/data/sarees";
 import { generateWhatsAppLink } from "@/utils/whatsapp";
 
@@ -336,6 +336,9 @@ export default function SareeDetailPage() {
                   href={whatsappHref}
                   target="_blank"
                   rel="noopener noreferrer"
+                  onClick={() => {
+                    postEnquiry({ sareeId: saree.id, sareeTitle: saree.name }).catch(() => {});
+                  }}
                   className="group w-full flex items-center justify-center gap-3 font-sans text-sm uppercase tracking-[0.22em] font-medium transition-all duration-300 relative overflow-hidden"
                   style={{ background: "#128C7E", color: "#fff", paddingBlock: "1.1rem" }}
                   data-testid="btn-whatsapp-saree"

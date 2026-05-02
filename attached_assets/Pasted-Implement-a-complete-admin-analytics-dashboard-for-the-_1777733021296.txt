@@ -1,0 +1,112 @@
+Implement a complete admin analytics dashboard for the saree website.
+
+Tech:
+- Node.js + Express (backend)
+- MongoDB
+- React + Tailwind (frontend)
+
+----------------------------------
+
+1. Backend Analytics API:
+
+Create endpoint:
+
+GET /api/analytics
+
+Response should include:
+
+{
+  totalSarees: number,
+  totalCollections: number,
+  totalCustomers: number,
+  recentSarees: [last 5 sarees],
+  enquiriesCount: number,
+  monthlySareeUploads: [
+    { month: "Jan", count: number },
+    { month: "Feb", count: number }
+  ]
+}
+
+----------------------------------
+
+2. Backend Logic:
+
+- Count documents using MongoDB:
+  - Saree.countDocuments()
+  - Collection.countDocuments()
+  - Customer.countDocuments()
+
+- Get recent sarees:
+  - Sort by createdAt descending
+  - Limit 5
+
+- Monthly uploads:
+  - Group sarees by month using aggregation
+
+----------------------------------
+
+3. Enquiry Tracking (IMPORTANT):
+
+- Create model:
+  Enquiry:
+    - sareeId
+    - createdAt
+
+- When user clicks "Enquire on WhatsApp":
+  - Call API:
+    POST /api/enquiry
+  - Save enquiry in DB
+
+----------------------------------
+
+4. Frontend Dashboard UI:
+
+Create Admin Dashboard Page:
+
+Sections:
+
+A. Overview Cards:
+- Total Sarees
+- Collections
+- Customers
+- Enquiries
+
+B. Charts Section:
+- Line or bar chart for monthly saree uploads
+
+C. Recent Activity:
+- List last 5 added sarees
+
+----------------------------------
+
+5. UI Design:
+
+- Clean SaaS dashboard style
+- Use cards with icons
+- Smooth hover effects
+- Mobile responsive
+
+----------------------------------
+
+6. Data Fetching:
+
+- Fetch analytics from:
+  /api/analytics
+
+- Show:
+  - Loading state
+  - Error handling
+
+----------------------------------
+
+7. Optional Enhancements:
+
+- Add "Top Viewed Sarees" (if tracking views)
+- Add filters (last 7 days / 30 days)
+
+----------------------------------
+
+Final Output:
+- Fully working analytics dashboard
+- Clean UI + backend integration
+- Real data-driven admin panel

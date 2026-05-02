@@ -5,6 +5,8 @@ import collectionRouter from "./collection.routes.js";
 import sareeRouter      from "./saree.routes.js";
 import homepageRouter   from "./homepage.routes.js";
 import broadcastRouter  from "./broadcast.routes.js";
+import analyticsRouter  from "./analytics.routes.js";
+import enquiryRouter    from "./enquiry.routes.js";
 
 const router: IRouter = Router();
 
@@ -14,5 +16,7 @@ router.use("/collections", collectionRouter);
 router.use("/sarees",      sareeRouter);
 router.use("/homepage",    homepageRouter);
 router.use("/broadcast",   broadcastRouter);
+router.use("/analytics",   analyticsRouter);
+router.use("/enquiry",     enquiryRouter);
 
 export default router;
