@@ -11,6 +11,8 @@ import AdminDashboard from "@/pages/admin-dashboard";
 import AdminContentPage from "@/pages/admin-content";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { getCollections, getAllSarees, getHomepage, type ApiCollection, type UISaree } from "@/services/api";
+import { NotificationProvider, useToast } from "@/components/NotificationToast";
+import { getSocket } from "@/lib/socket";
 
 function StickyNav() {
   const [scrolled, setScrolled] = useState(false);
@@ -447,30 +449,68 @@ function HomePage() {
   );
 }
 
+/* ── socket listener — subscribes to real-time events ─────── */
+function SocketListener() {
+  const { push } = useToast();
+
+  useEffect(() => {
+    const socket = getSocket();
+
+    function onNewSaree(data: { title: string; price: number; image: string }) {
+      push({
+        kind: "new_saree",
+        title: `New saree added: ${data.title}`,
+        body: `₹${Number(data.price).toLocaleString("en-IN")}`,
+      });
+    }
+
+    function onAdminMessage(data: { message: string }) {
+      push({
+        kind: "admin_message",
+        title: "Announcement",
+        body: data.message,
+      });
+    }
+
+    socket.on("new_saree", onNewSaree);
+    socket.on("admin_message", onAdminMessage);
+
+    return () => {
+      socket.off("new_saree", onNewSaree);
+      socket.off("admin_message", onAdminMessage);
+    };
+  }, [push]);
+
+  return null;
+}
+
 function App() {
   return (
-    <AuthProvider>
-    <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-      <Switch>
-        <Route path="/" component={HomePage} />
-        <Route path="/collections" component={CollectionsPage} />
-        <Route path="/saree/:id" component={SareeDetailPage} />
-        <Route path="/about" component={AboutPage} />
-        <Route path="/contact" component={ContactPage} />
-        <Route path="/admin" component={AdminLoginPage} />
-        <Route path="/admin/dashboard" component={AdminDashboard} />
-        <Route path="/admin/content" component={AdminContentPage} />
-        <Route>
-          <div className="min-h-screen flex items-center justify-center bg-[#FAF7F2]">
-            <div className="text-center">
-              <p className="font-serif text-2xl text-[#7A7060] mb-4">Page not found</p>
-              <Link href="/" className="text-[#B8973E] uppercase tracking-widest text-xs font-sans">← Return Home</Link>
-            </div>
-          </div>
-        </Route>
-      </Switch>
-    </WouterRouter>
-    </AuthProvider>
+    <NotificationProvider>
+      <AuthProvider>
+        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+          <SocketListener />
+          <Switch>
+            <Route path="/" component={HomePage} />
+            <Route path="/collections" component={CollectionsPage} />
+            <Route path="/saree/:id" component={SareeDetailPage} />
+            <Route path="/about" component={AboutPage} />
+            <Route path="/contact" component={ContactPage} />
+            <Route path="/admin" component={AdminLoginPage} />
+            <Route path="/admin/dashboard" component={AdminDashboard} />
+            <Route path="/admin/content" component={AdminContentPage} />
+            <Route>
+              <div className="min-h-screen flex items-center justify-center bg-[#FAF7F2]">
+                <div className="text-center">
+                  <p className="font-serif text-2xl text-[#7A7060] mb-4">Page not found</p>
+                  <Link href="/" className="text-[#B8973E] uppercase tracking-widest text-xs font-sans">← Return Home</Link>
+                </div>
+              </div>
+            </Route>
+          </Switch>
+        </WouterRouter>
+      </AuthProvider>
+    </NotificationProvider>
   );
 }
 

@@ -1,0 +1,113 @@
+Implement a real-time notification and admin broadcast system for the saree website.
+
+Tech:
+- Node.js + Express
+- Socket.io for real-time communication
+- React frontend
+
+----------------------------------
+
+1. Backend Setup (Socket.io):
+
+- Install and configure Socket.io with Express server
+- Initialize socket server
+
+- On client connection:
+  - Log connection
+  - Allow joining a "global" room
+
+----------------------------------
+
+2. Real-Time Notification (Auto)
+
+When a new saree is created:
+
+- Emit event:
+  "new_saree"
+
+- Payload:
+  {
+    title,
+    price,
+    image
+  }
+
+- Broadcast to all connected clients
+
+----------------------------------
+
+3. Admin Broadcast System
+
+Create API:
+POST /api/broadcast
+
+Request body:
+{
+  message: "New festive collection launched!"
+}
+
+- On API call:
+  - Emit event:
+    "admin_message"
+  - Send message to all clients
+
+----------------------------------
+
+4. Frontend Socket Integration
+
+- Install socket.io-client
+
+- Connect to backend socket server
+
+- Listen for events:
+
+1. "new_saree"
+   - Show notification:
+     "New saree added: {title}"
+
+2. "admin_message"
+   - Show notification banner or toast
+
+----------------------------------
+
+5. UI Notification System
+
+- Create reusable notification/toast component
+
+- Features:
+  - Slide-in animation
+  - Auto-dismiss after few seconds
+  - Clean premium UI (matching site design)
+
+----------------------------------
+
+6. Admin Panel Integration
+
+- Add broadcast input field:
+  - Text input
+  - "Send" button
+
+- On click:
+  - Call /api/broadcast
+  - Show success message
+
+----------------------------------
+
+7. Ensure:
+
+- Works in real-time (no refresh needed)
+- Clean architecture
+- No UI breaking
+- Mobile-friendly notifications
+
+----------------------------------
+
+8. Optional Enhancement:
+
+- Add sound effect or highlight animation for new notifications
+- Store last few notifications in state
+
+Final Output:
+- Working real-time notification system
+- Admin broadcast feature
+- Socket.io integration (frontend + backend)

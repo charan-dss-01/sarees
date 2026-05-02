@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link, useLocation } from "wouter";
 import { getToken, clearToken, getAllSarees, getCollections, type UISaree, type ApiCollection } from "@/services/api";
+import { useToast } from "@/components/NotificationToast";
 
 /* ─── palette ─────────────────────────────────────── */
 const C = {
@@ -511,6 +512,110 @@ function ActivityFeed() {
   );
 }
 
+/* ─── broadcast panel ─────────────────────────────── */
+function BroadcastPanel() {
+  const { push } = useToast();
+  const [message, setMessage] = useState("");
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  async function handleSend() {
+    const msg = message.trim();
+    if (!msg || sending) return;
+    setSending(true);
+    try {
+      const res = await fetch("/api/broadcast", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(getToken() ? { Authorization: `Bearer ${getToken()}` } : {}),
+        },
+        body: JSON.stringify({ message: msg }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      setMessage("");
+      setSent(true);
+      push({ kind: "success", title: "Broadcast sent!", body: msg });
+      setTimeout(() => setSent(false), 3000);
+    } catch {
+      push({ kind: "error", title: "Broadcast failed", body: "Please try again." });
+    } finally {
+      setSending(false);
+    }
+  }
+
+  return (
+    <div
+      className="rounded-xl border p-5 flex flex-col gap-5"
+      style={{ background: C.surface, borderColor: C.border }}
+    >
+      <div>
+        <p className="font-sans font-semibold text-sm" style={{ color: C.text }}>Broadcast Message</p>
+        <p className="font-sans text-xs mt-0.5" style={{ color: C.subtle }}>Send a real-time announcement to all visitors</p>
+      </div>
+
+      <div className="flex flex-col gap-3">
+        <input
+          ref={inputRef}
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleSend()}
+          placeholder="e.g. New festive collection launched!"
+          maxLength={500}
+          className="w-full px-3.5 py-2.5 rounded-lg border font-sans text-sm outline-none transition-colors"
+          style={{
+            background: C.bg,
+            borderColor: C.border,
+            color: C.text,
+          }}
+          onFocus={(e) => (e.currentTarget.style.borderColor = C.gold)}
+          onBlur={(e) => (e.currentTarget.style.borderColor = C.border)}
+        />
+
+        <button
+          onClick={handleSend}
+          disabled={!message.trim() || sending}
+          className="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg font-sans text-xs font-semibold uppercase tracking-[0.12em] transition-all"
+          style={{
+            background: sent ? C.green : message.trim() ? C.gold : C.border,
+            color: message.trim() || sent ? "#fff" : C.subtle,
+            cursor: !message.trim() || sending ? "not-allowed" : "pointer",
+            opacity: sending ? 0.7 : 1,
+          }}
+        >
+          {sending ? (
+            <>
+              <svg className="animate-spin" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+              </svg>
+              Sending…
+            </>
+          ) : sent ? (
+            <>
+              <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M2 7l4 4 6-6"/>
+              </svg>
+              Sent!
+            </>
+          ) : (
+            <>
+              <svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 10L18 3l-7 15-2-6-6-2z"/>
+              </svg>
+              Send Broadcast
+            </>
+          )}
+        </button>
+
+        <p className="font-sans text-[11px] text-right" style={{ color: C.subtle }}>
+          {message.length}/500
+        </p>
+      </div>
+    </div>
+  );
+}
+
 /* ─── page ────────────────────────────────────────── */
 export default function AdminDashboard() {
   const [, navigate] = useLocation();
@@ -637,6 +742,7 @@ export default function AdminDashboard() {
                 </div>
                 <div className="flex flex-col gap-4">
                   <CategoryBreakdown barData={barData} />
+                  <BroadcastPanel />
                   <ActivityFeed />
                 </div>
               </div>

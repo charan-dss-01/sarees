@@ -1,8 +1,10 @@
 import "dotenv/config";
+import { createServer } from "node:http";
 import app from "./app.js";
 import { logger } from "./lib/logger.js";
 import { connectDB } from "./config/db.js";
 import { initCloudinary } from "./config/cloudinary.js";
+import { initSocket } from "./socket/index.js";
 
 const rawPort = process.env["PORT"];
 
@@ -30,12 +32,16 @@ async function bootstrap(): Promise<void> {
     logger.warn({ err }, "Cloudinary init failed — image uploads will be unavailable");
   }
 
-  app.listen(port, (err?: Error) => {
-    if (err) {
-      logger.error({ err }, "Error listening on port");
-      process.exit(1);
-    }
+  const server = createServer(app);
+  initSocket(server);
+
+  server.listen(port, () => {
     logger.info({ port }, "Server listening");
+  });
+
+  server.on("error", (err: Error) => {
+    logger.error({ err }, "Error listening on port");
+    process.exit(1);
   });
 }
 

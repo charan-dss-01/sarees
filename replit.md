@@ -42,18 +42,21 @@ Fonts: Cormorant Garamond (serif) + DM Sans (sans) via Google Fonts `@import` in
 ## Key Files
 
 ### Frontend
-- `src/App.tsx` — Router with `AuthProvider` wrapper; dynamic `FeaturedCollections` and `NewArrivals` sections
+- `src/App.tsx` — Router with `AuthProvider` + `NotificationProvider` wrappers; `SocketListener` component subscribes to real-time events
+- `src/lib/socket.ts` — Singleton `socket.io-client` instance; connects to `/api/socket.io`
+- `src/components/NotificationToast.tsx` — Premium animated toast system (Framer Motion slide-in, auto-dismiss, progress bar, 4 kinds: new_saree/admin_message/success/error)
 - `src/contexts/AuthContext.tsx` — JWT auth context (localStorage token persistence)
 - `src/services/api.ts` — All API functions, `UISaree` type, `normalizeSaree()`, token helpers (`getToken`, `clearToken`)
 - `src/pages/admin-login.tsx` — Calls real `loginAdmin()` API, redirects on success
-- `src/pages/admin-dashboard.tsx` — Auth-guarded; fetches sarees + collections from API; live stats + category breakdown
+- `src/pages/admin-dashboard.tsx` — Auth-guarded; fetches sarees + collections from API; live stats + category breakdown; `BroadcastPanel` for sending real-time announcements
 - `src/pages/admin-content.tsx` — Auth-guarded; fetches homepage content; saves via `updateHomepage()`
 - `src/pages/collections.tsx` — Fetches sarees from API with skeleton + static fallback
 - `src/pages/saree-detail.tsx` — Fetches single saree with skeleton + static fallback
 - `src/data/sarees.ts` — Static fallback data (12 sarees) — kept for offline/no-backend mode
 
 ### Backend
-- `src/index.ts` — Express bootstrap; MongoDB and Cloudinary failures are non-fatal (app still starts)
+- `src/index.ts` — Express bootstrap; `createServer(app)` + `initSocket(server)` for Socket.io; MongoDB and Cloudinary failures are non-fatal
+- `src/socket/index.ts` — Socket.io singleton (`initSocket`, `getIo`); path `/api/socket.io`; logs connect/disconnect/join events
 - `src/models/Saree.ts` — Mongoose saree model
 - `src/models/Collection.ts` — Mongoose collection model
 - `src/routes/auth.ts` — `POST /api/auth/login` (JWT)
@@ -61,6 +64,8 @@ Fonts: Cormorant Garamond (serif) + DM Sans (sans) via Google Fonts `@import` in
 - `src/routes/collections.ts` — CRUD collection routes
 - `src/routes/homepage.ts` — GET/PUT homepage content
 - `src/routes/upload.ts` — Cloudinary image upload
+- `src/routes/broadcast.routes.ts` — `POST /api/broadcast` (JWT-protected)
+- `src/controllers/broadcast.controller.ts` — Emits `admin_message` event to all socket clients
 - `build.mjs` — esbuild bundler
 
 ## Required Secrets (not yet set)

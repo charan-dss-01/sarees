@@ -85,8 +85,16 @@ export async function createSaree(req: Request, res: Response, next: NextFunctio
 
     const populated = await saree.populate("collection", "name");
 
-    /* non-blocking notification — failure must not break the response */
+    /* non-blocking notifications — failure must not break the response */
     try { sendWhatsAppNotification({ title, price }); } catch { /* intentional */ }
+    try {
+      const { getIo } = await import("../socket/index.js");
+      getIo().emit("new_saree", {
+        title,
+        price,
+        image: uploads[0]?.url ?? "",
+      });
+    } catch { /* socket may not be ready */ }
 
     res.status(201).json({ status: "success", data: populated });
   } catch (err) { next(err); }
