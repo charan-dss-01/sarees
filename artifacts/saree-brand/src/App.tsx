@@ -6,6 +6,7 @@ import CollectionsPage from "@/pages/collections";
 import SareeDetailPage from "@/pages/saree-detail";
 import AboutPage from "@/pages/about";
 import ContactPage from "@/pages/contact";
+import AdminLoginPage from "@/pages/admin-login";
 
 function StickyNav() {
   const [scrolled, setScrolled] = useState(false);
@@ -412,6 +413,7 @@ function App() {
         <Route path="/saree/:id" component={SareeDetailPage} />
         <Route path="/about" component={AboutPage} />
         <Route path="/contact" component={ContactPage} />
+        <Route path="/admin" component={AdminLoginPage} />
         <Route>
           <div className="min-h-screen flex items-center justify-center bg-[#FAF7F2]">
             <div className="text-center">
