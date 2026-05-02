@@ -5,6 +5,7 @@ import { logger } from "./lib/logger.js";
 import { connectDB } from "./config/db.js";
 import { initCloudinary } from "./config/cloudinary.js";
 import { initSocket } from "./socket/index.js";
+import { seedAdmin } from "./utils/seedAdmin.js";
 
 const rawPort = process.env["PORT"];
 
@@ -22,6 +23,7 @@ async function bootstrap(): Promise<void> {
   // DB and Cloudinary are optional at startup — routes will 503 if not connected
   try {
     await connectDB();
+    await seedAdmin();
   } catch (err) {
     logger.warn({ err }, "MongoDB connection failed — DB routes will be unavailable");
   }
