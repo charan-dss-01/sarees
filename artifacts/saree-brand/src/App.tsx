@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import { Switch, Route, Router as WouterRouter, Link } from "wouter";
 import { SiWhatsapp, SiInstagram, SiPinterest } from "react-icons/si";
+import CollectionsPage from "@/pages/collections";
 
 function StickyNav() {
   const [scrolled, setScrolled] = useState(false);
@@ -24,15 +26,15 @@ function StickyNav() {
     >
       <div className="container mx-auto px-6 md:px-12 flex items-center justify-between">
         <div className="hidden md:flex gap-8 text-sm uppercase tracking-[0.2em] font-sans">
-          <a
-            href="#collections"
+          <Link
+            href="/collections"
             className={`hover:text-primary transition-colors ${
               scrolled ? "text-foreground" : "text-white"
             }`}
             data-testid="nav-collections"
           >
             Collections
-          </a>
+          </Link>
           <a
             href="#story"
             className={`hover:text-primary transition-colors ${
@@ -43,7 +45,7 @@ function StickyNav() {
             Story
           </a>
         </div>
-        
+
         <div
           className={`font-serif text-3xl tracking-[0.25em] text-center ${
             scrolled ? "text-foreground" : "text-white"
@@ -96,7 +98,7 @@ function HeroSection() {
         transition={{ repeat: Infinity, duration: 16, ease: "easeInOut" }}
       />
       <div className="absolute inset-0 z-0 bg-black/20" />
-      
+
       <div className="relative z-10 flex flex-col items-center text-center px-6 mt-16">
         <motion.p
           className="text-primary-foreground/80 text-xs md:text-sm uppercase tracking-[0.4em] mb-6 font-sans"
@@ -106,7 +108,7 @@ function HeroSection() {
         >
           EST. 1987 · VARANASI
         </motion.p>
-        
+
         <motion.h1
           className="font-serif text-6xl md:text-8xl lg:text-9xl text-white font-light tracking-widest mb-6"
           initial={{ opacity: 0, y: 30 }}
@@ -115,7 +117,7 @@ function HeroSection() {
         >
           ANANYA
         </motion.h1>
-        
+
         <motion.p
           className="font-serif italic text-xl md:text-3xl text-[#D4AF72] mb-12"
           initial={{ opacity: 0 }}
@@ -124,18 +126,21 @@ function HeroSection() {
         >
           Where silk remembers its soul.
         </motion.p>
-        
-        <motion.a
-          href="#collections"
-          className="px-8 py-3 border border-white/50 text-white font-sans text-sm uppercase tracking-widest hover:bg-primary hover:border-primary hover:text-white transition-all duration-400 ease-out relative group overflow-hidden"
+
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 1, delay: 1 }}
-          data-testid="btn-explore-hero"
         >
-          <span className="relative z-10">Explore Collection</span>
-          <div className="absolute inset-0 w-full h-full bg-white/10 opacity-0 group-hover:opacity-100 group-hover:animate-pulse transition-opacity duration-300" />
-        </motion.a>
+          <Link
+            href="/collections"
+            className="px-8 py-3 border border-white/50 text-white font-sans text-sm uppercase tracking-widest hover:bg-primary hover:border-primary hover:text-white transition-all duration-400 ease-out relative group overflow-hidden inline-block"
+            data-testid="btn-explore-hero"
+          >
+            <span className="relative z-10">Explore Collection</span>
+            <div className="absolute inset-0 w-full h-full bg-white/10 opacity-0 group-hover:opacity-100 group-hover:animate-pulse transition-opacity duration-300" />
+          </Link>
+        </motion.div>
       </div>
 
       <motion.div
@@ -195,21 +200,22 @@ function FeaturedCollections() {
               }}
               data-testid={`collection-card-${item.title.toLowerCase()}`}
             >
-              <div className="overflow-hidden aspect-[3/4] mb-6 relative bg-card">
-                {/* Fallback color while image loads */}
-                <motion.img
-                  src={item.img}
-                  alt={item.title}
-                  className="w-full h-full object-cover"
-                  whileHover={{ scale: 1.04 }}
-                  transition={{ duration: 0.6, ease: "easeOut" }}
-                />
-              </div>
-              <div className="flex flex-col items-center text-center">
-                <span className="text-primary uppercase tracking-[0.2em] text-xs font-sans mb-3">{item.subtitle}</span>
-                <h3 className="font-serif text-3xl text-foreground mb-4 font-light group-hover:text-primary transition-colors duration-300">{item.title}</h3>
-                <span className="text-muted-foreground uppercase tracking-widest text-xs font-sans pb-1 border-b border-transparent group-hover:border-primary transition-colors duration-300">Explore</span>
-              </div>
+              <Link href="/collections" className="flex flex-col">
+                <div className="overflow-hidden aspect-[3/4] mb-6 relative bg-card">
+                  <motion.img
+                    src={item.img}
+                    alt={item.title}
+                    className="w-full h-full object-cover"
+                    whileHover={{ scale: 1.04 }}
+                    transition={{ duration: 0.6, ease: "easeOut" }}
+                  />
+                </div>
+                <div className="flex flex-col items-center text-center">
+                  <span className="text-primary uppercase tracking-[0.2em] text-xs font-sans mb-3">{item.subtitle}</span>
+                  <h3 className="font-serif text-3xl text-foreground mb-4 font-light group-hover:text-primary transition-colors duration-300">{item.title}</h3>
+                  <span className="text-muted-foreground uppercase tracking-widest text-xs font-sans pb-1 border-b border-transparent group-hover:border-primary transition-colors duration-300">Explore</span>
+                </div>
+              </Link>
             </motion.div>
           ))}
         </div>
@@ -240,10 +246,10 @@ function NewArrivals() {
           }}
         >
           <h2 className="font-serif text-4xl text-foreground font-light">New Arrivals</h2>
-          <a href="#" className="hidden md:inline-block text-primary uppercase tracking-widest text-xs font-sans pb-1 border-b border-primary hover:text-foreground hover:border-foreground transition-colors duration-300" data-testid="link-view-all">View All</a>
+          <Link href="/collections" className="hidden md:inline-block text-primary uppercase tracking-widest text-xs font-sans pb-1 border-b border-primary hover:text-foreground hover:border-foreground transition-colors duration-300" data-testid="link-view-all">View All</Link>
         </motion.div>
 
-        <div className="flex overflow-x-auto gap-6 md:gap-8 pb-8 snap-x snap-mandatory scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+        <div className="flex overflow-x-auto gap-6 md:gap-8 pb-8 snap-x snap-mandatory" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
           {products.map((item, i) => (
             <motion.div
               key={i}
@@ -363,7 +369,7 @@ function Footer() {
       <div className="w-16 h-[1px] bg-primary mb-12" />
       <h2 className="font-serif text-3xl tracking-[0.3em] text-foreground mb-8">ANANYA</h2>
       <div className="flex flex-wrap justify-center gap-8 mb-12 font-sans uppercase tracking-widest text-xs text-muted-foreground">
-        <a href="#collections" className="hover:text-primary transition-colors" data-testid="footer-link-collections">Collections</a>
+        <Link href="/collections" className="hover:text-primary transition-colors" data-testid="footer-link-collections">Collections</Link>
         <a href="#story" className="hover:text-primary transition-colors" data-testid="footer-link-story">Story</a>
         <a href="#contact" className="hover:text-primary transition-colors" data-testid="footer-link-contact">Contact</a>
       </div>
@@ -378,7 +384,7 @@ function Footer() {
   );
 }
 
-function App() {
+function HomePage() {
   return (
     <div className="min-h-screen bg-background text-foreground selection:bg-primary selection:text-primary-foreground font-sans">
       <StickyNav />
@@ -391,6 +397,25 @@ function App() {
       </main>
       <Footer />
     </div>
+  );
+}
+
+function App() {
+  return (
+    <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+      <Switch>
+        <Route path="/" component={HomePage} />
+        <Route path="/collections" component={CollectionsPage} />
+        <Route>
+          <div className="min-h-screen flex items-center justify-center bg-[#FAF7F2]">
+            <div className="text-center">
+              <p className="font-serif text-2xl text-[#7A7060] mb-4">Page not found</p>
+              <Link href="/" className="text-[#B8973E] uppercase tracking-widest text-xs font-sans">← Return Home</Link>
+            </div>
+          </div>
+        </Route>
+      </Switch>
+    </WouterRouter>
   );
 }
 
