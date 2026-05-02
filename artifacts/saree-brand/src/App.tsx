@@ -8,6 +8,7 @@ import AboutPage from "@/pages/about";
 import ContactPage from "@/pages/contact";
 import AdminLoginPage from "@/pages/admin-login";
 import AdminDashboard from "@/pages/admin-dashboard";
+import AdminContentPage from "@/pages/admin-content";
 
 function StickyNav() {
   const [scrolled, setScrolled] = useState(false);
@@ -416,6 +417,7 @@ function App() {
         <Route path="/contact" component={ContactPage} />
         <Route path="/admin" component={AdminLoginPage} />
         <Route path="/admin/dashboard" component={AdminDashboard} />
+        <Route path="/admin/content" component={AdminContentPage} />
         <Route>
           <div className="min-h-screen flex items-center justify-center bg-[#FAF7F2]">
             <div className="text-center">
