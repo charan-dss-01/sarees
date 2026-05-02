@@ -42,16 +42,6 @@ export async function getAnalytics(_req: Request, res: Response, next: NextFunct
       monthlyMap.set(`${entry._id.year}-${entry._id.month}`, entry.count);
     }
 
-    const monthlySareeUploads: { month: string; count: number }[] = [];
-    for (let i = 11; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const key = `${d.getFullYear()}-${d.getMonth() + 1}`;
-      monthlySareeUploads.unshift({
-        month: MONTHS[d.getMonth()],
-        count: monthlyMap.get(key) ?? 0,
-      });
-    }
-    /* unshift built it reversed, fix ordering — push into array forward instead */
     const ordered: { month: string; count: number }[] = [];
     for (let i = 11; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);

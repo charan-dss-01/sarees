@@ -1,6 +1,7 @@
 import { Router } from "express";
 import {
   getAllCollections,
+  getCollectionById,
   createCollection,
   updateCollection,
   deleteCollection,
@@ -11,6 +12,7 @@ import { uploadSingle } from "../middlewares/upload.js";
 const router = Router();
 
 router.get("/",        getAllCollections);
+router.get("/:id",     getCollectionById);
 router.post("/",       protect, uploadSingle, createCollection);
 router.put("/:id",     protect, uploadSingle, updateCollection);
 router.delete("/:id",  protect, deleteCollection);

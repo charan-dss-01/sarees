@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
 import { Saree } from "../models/Saree.js";
-import { uploadToCloudinary } from "../services/cloudinary.service.js";
+import { uploadToCloudinary, deleteFromCloudinary } from "../services/cloudinary.service.js";
 import { AppError } from "../utils/AppError.js";
 import {
   requireString,
@@ -123,10 +123,20 @@ export async function updateSaree(req: Request, res: Response, next: NextFunctio
 
     const files = req.files as Express.Multer.File[] | undefined;
     if (files?.length) {
+      /* delete replaced images from Cloudinary (best-effort, non-blocking) */
+      const oldUrls = saree.images;
       const uploads = await Promise.all(
         files.map((f) => uploadToCloudinary(f.buffer, "ananya/sarees", { width: 1600 })),
       );
       saree.images = uploads.map((u) => u.url);
+
+      /* clean up old images after new ones are saved */
+      void Promise.allSettled(
+        oldUrls.map((url) => {
+          const publicId = extractPublicId(url);
+          return publicId ? deleteFromCloudinary(publicId) : Promise.resolve();
+        }),
+      );
     }
 
     await saree.save();
@@ -141,6 +151,21 @@ export async function deleteSaree(req: Request, res: Response, next: NextFunctio
     validateMongoId(req.params["id"] ?? "", "saree id");
     const saree = await Saree.findByIdAndDelete(req.params["id"]);
     if (!saree) throw new AppError("Saree not found.", 404);
+
+    /* clean up Cloudinary images (best-effort) */
+    void Promise.allSettled(
+      saree.images.map((url) => {
+        const publicId = extractPublicId(url);
+        return publicId ? deleteFromCloudinary(publicId) : Promise.resolve();
+      }),
+    );
+
     res.status(200).json({ status: "success", message: "Saree deleted." });
   } catch (err) { next(err); }
+}
+
+/* ── helpers ─────────────────────────────────────────────── */
+function extractPublicId(url: string): string | null {
+  const match = url.match(/\/upload\/(?:v\d+\/)?(.+?)(?:\.[a-z]{2,4})?$/i);
+  return match?.[1] ?? null;
 }

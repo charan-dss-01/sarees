@@ -6,7 +6,8 @@ import { AppError } from "../utils/AppError.js";
 /* ── POST /api/broadcast ─────────────────────────────────── */
 export async function broadcastMessage(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const message = requireString(req.body, "message", { min: 1, max: 500 });
+    const body = req.body as Record<string, unknown>;
+    const message = requireString(body["message"], "message", { min: 1, max: 500 });
 
     let io;
     try {

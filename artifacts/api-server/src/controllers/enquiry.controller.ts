@@ -7,7 +7,10 @@ import { getIo } from "../socket/index.js";
 export async function createEnquiry(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const body = req.body as Record<string, unknown>;
-    const sareeTitle = typeof body["sareeTitle"] === "string" ? body["sareeTitle"].trim().slice(0, 200) : "";
+    const sareeTitle =
+      typeof body["sareeTitle"] === "string" && body["sareeTitle"].trim().length > 0
+        ? body["sareeTitle"].trim().slice(0, 200)
+        : "Unknown Saree";
     const rawId = body["sareeId"];
     const sareeId =
       typeof rawId === "string" && mongoose.Types.ObjectId.isValid(rawId)

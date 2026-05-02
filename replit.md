@@ -55,23 +55,33 @@ Fonts: Cormorant Garamond (serif) + DM Sans (sans) via Google Fonts `@import` in
 - `src/data/sarees.ts` — Static fallback data (12 sarees) — kept for offline/no-backend mode
 
 ### Backend
-- `src/index.ts` — Express bootstrap; `createServer(app)` + `initSocket(server)` for Socket.io; MongoDB and Cloudinary failures are non-fatal
-- `src/socket/index.ts` — Socket.io singleton (`initSocket`, `getIo`); path `/api/socket.io`; logs connect/disconnect/join events
-- `src/models/Saree.ts` — Mongoose saree model
-- `src/models/Collection.ts` — Mongoose collection model
-- `src/routes/auth.ts` — `POST /api/auth/login` (JWT)
-- `src/routes/sarees.ts` — CRUD saree routes
-- `src/routes/collections.ts` — CRUD collection routes
-- `src/routes/homepage.ts` — GET/PUT homepage content
-- `src/routes/upload.ts` — Cloudinary image upload
-- `src/routes/broadcast.routes.ts` — `POST /api/broadcast` (JWT-protected)
-- `src/controllers/broadcast.controller.ts` — Emits `admin_message` event to all socket clients
-- `src/models/Enquiry.ts` — Mongoose model: sareeId (ObjectId?), sareeTitle, createdAt; indexed by createdAt + sareeId
-- `src/routes/analytics.routes.ts` — `GET /api/analytics` (public)
-- `src/routes/enquiry.routes.ts` — `POST /api/enquiry` (public) + `GET /api/enquiry` (JWT-protected)
-- `src/controllers/analytics.controller.ts` — Aggregates totalSarees, totalCollections, enquiriesCount, recentSarees, 12-month monthlySareeUploads via MongoDB aggregation pipeline
-- `src/controllers/enquiry.controller.ts` — Creates Enquiry doc + emits `new_enquiry` socket event to admin
-- `build.mjs` — esbuild bundler
+- `src/index.ts` — Express bootstrap; `connectDB()` → `seedAdmin()` on boot; `createServer(app)` + `initSocket(server)`; MongoDB/Cloudinary failures are non-fatal warnings
+- `src/utils/seedAdmin.ts` — Creates first admin user on boot if no users exist (reads ADMIN_EMAIL/ADMIN_PASSWORD env vars, defaults: admin@ananya.com / Ananya@2025!)
+- `src/socket/index.ts` — Socket.io singleton (`initSocket`, `getIo`); path `/api/socket.io`
+- `src/middlewares/auth.ts` — JWT `protect` middleware; reads `Authorization: Bearer <token>`
+- `src/middlewares/validate.ts` — `requireString`, `requireEmail`, `requirePassword`, `requirePositiveNumber`, `validateMongoId`, `parsePagination`
+- `src/middlewares/error.ts` — Central error handler: AppError→JSON, CastError→400, ValidationError→422, duplicate→409, buffering timeout→503, JWT→401, Multer→413, else→500
+- `src/middlewares/upload.ts` — multer memory storage; `uploadSingle` (field: `image`) + `uploadMultiple` (field: `images`, max 10); JPEG/PNG/WebP/AVIF only; 10 MB limit
+- `src/middlewares/sanitize.ts` — Custom NoSQL injection sanitizer (Express 5 compatible)
+- `src/models/User.ts` — Admin user; bcrypt hash on save; `comparePassword()`
+- `src/models/Saree.ts` — Fields: title, price, fabric, images[], collection (ref); indexes: collection+createdAt, fabric, title text
+- `src/models/Collection.ts` — Fields: name (unique), image; index: name unique
+- `src/models/HomepageContent.ts` — Fields: heroImages[], featuredCollections[], banners[]
+- `src/models/Enquiry.ts` — Fields: sareeId (ObjectId?), sareeTitle; indexes: createdAt, sareeId
+- `src/routes/auth.routes.ts` — `POST /api/auth/login`, `GET /api/auth/me` (JWT)
+- `src/routes/collection.routes.ts` — `GET /api/collections`, `GET /api/collections/:id`, `POST` (JWT+upload), `PUT /:id` (JWT+upload), `DELETE /:id` (JWT; blocks if sarees exist)
+- `src/routes/saree.routes.ts` — `GET /api/sarees` (paginated, filterable by collection/fabric), `GET /api/sarees/:id`, `POST` (JWT+upload), `PUT /:id` (JWT+upload; cleans old Cloudinary images), `DELETE /:id` (JWT; cleans Cloudinary images)
+- `src/routes/homepage.routes.ts` — `GET /api/homepage`, `PUT /api/homepage` (JWT+upload; upserts single doc)
+- `src/routes/analytics.routes.ts` — `GET /api/analytics` (public; 12-month aggregation)
+- `src/routes/enquiry.routes.ts` — `POST /api/enquiry` (public), `GET /api/enquiry` (JWT; last 50)
+- `src/routes/broadcast.routes.ts` — `POST /api/broadcast` (JWT; emits `admin_message` to all sockets)
+- `src/controllers/collection.controller.ts` — DELETE blocks with 409 if sarees still reference the collection; UPDATE deletes old Cloudinary image on replace
+- `src/controllers/saree.controller.ts` — DELETE + UPDATE both clean up replaced Cloudinary images (best-effort, non-blocking)
+- `src/controllers/analytics.controller.ts` — Parallel Promise.all aggregation; full 12-month window always present (zeros for empty months)
+- `src/services/cloudinary.service.ts` — `uploadToCloudinary` (stream upload) + `deleteFromCloudinary`
+- `src/utils/jwt.ts` — `signToken` (7d expiry by default) + `verifyToken`; throws if JWT_SECRET missing
+- `src/utils/AppError.ts` — Operational error class with `statusCode`
+- `build.mjs` — esbuild ESM bundler
 
 ## Required Secrets (not yet set)
 

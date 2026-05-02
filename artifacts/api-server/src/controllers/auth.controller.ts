@@ -19,7 +19,12 @@ export async function login(req: Request, res: Response, next: NextFunction): Pr
       throw new AppError("Invalid email or password.", 401);
     }
 
-    const token = signToken({ id: user.id as string, email: user.email });
+    let token: string;
+    try {
+      token = signToken({ id: user.id as string, email: user.email });
+    } catch {
+      throw new AppError("Authentication service is not configured. Please set JWT_SECRET.", 503);
+    }
 
     res.status(200).json({
       status: "success",
